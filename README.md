@@ -7,52 +7,49 @@ A monorepo with a Next.js frontend and FastAPI backend.
 ```
 flex/
 ├── frontend/    # Next.js app (TypeScript, Tailwind CSS)
-└── backend/     # FastAPI server
+├── backend/     # FastAPI server
+├── install.sh   # Install all dependencies
+└── run.sh       # Run servers (supports tmux)
 ```
 
-## Getting Started
+## Quick Start
+
+```bash
+./install.sh    # Install all dependencies
+./run.sh        # Run both servers in tmux
+```
+
+## Running Servers
+
+```bash
+./run.sh            # Run both (frontend + backend) in tmux
+./run.sh frontend   # Run frontend only (or: ./run.sh f)
+./run.sh backend    # Run backend only (or: ./run.sh b)
+```
+
+When running both, use `Ctrl+B D` to detach from tmux.
+
+- Frontend: http://localhost:3000
+- Backend: http://localhost:8000
+
+## Manual Setup
 
 ### Backend
 
-1. Create and activate a virtual environment:
-   ```bash
-   cd backend
-   uv venv
-   source .venv/bin/activate  # On Windows: .venv\Scripts\activate
-   ```
-
-2. Install dependencies:
-   ```bash
-   uv pip install -r requirements.txt
-   ```
-
-3. Start the server:
-   ```bash
-   uvicorn main:app --reload
-   ```
-
-Or run directly without activating the venv:
 ```bash
 cd backend
+uv venv
+uv pip install -r requirements.txt
 uv run uvicorn main:app --reload
 ```
 
-The API will be available at http://localhost:8000
-
 ### Frontend
 
-1. Install dependencies:
-   ```bash
-   cd frontend
-   npm install
-   ```
-
-2. Start the development server:
-   ```bash
-   npm run dev
-   ```
-
-The app will be available at http://localhost:3000
+```bash
+cd frontend
+npm install
+npm run dev
+```
 
 ## API Endpoints
 
