@@ -1,12 +1,13 @@
-from fastapi import APIRouter, HTTPException
-from pydantic import BaseModel
-from typing import Any
 import json
 from pathlib import Path
 
+from fastapi import APIRouter, HTTPException
+from pydantic import BaseModel
+
 from agents import run_pipeline
-from agents.storage import list_todos, load_todo, delete_todo, save_todo
 from agents.logging_config import get_logger
+from agents.state import TodoItem
+from agents.storage import delete_todo, generate_id, list_todos, load_todo, save_todo
 
 log = get_logger("api.pipeline")
 
@@ -31,14 +32,13 @@ class PipelineRequest(BaseModel):
 
 class TodoCreate(BaseModel):
     title: str
-    description: str = ""
-    priority: str = "medium"
+    description: str | None = None
+    parent_id: str | None = None
 
 
-class TodoUpdate(BaseModel):
+class TodoUpdateRequest(BaseModel):
     title: str | None = None
     description: str | None = None
-    priority: str | None = None
     status: str | None = None
 
 
@@ -67,7 +67,7 @@ async def get_todos():
     """Get all todos."""
     log.debug("Listing all todos")
     todos = list_todos()
-    return {"todos": todos}
+    return {"todos": [t.model_dump(exclude_none=True) for t in todos]}
 
 
 @router.get("/todos/{todo_id}")
@@ -78,33 +78,29 @@ async def get_todo(todo_id: str):
     if not todo:
         log.warning(f"Todo not found: {todo_id}")
         raise HTTPException(status_code=404, detail="Todo not found")
-    return todo
+    return todo.model_dump(exclude_none=True)
 
 
 @router.post("/todos")
 async def create_todo(todo: TodoCreate):
     """Create a new todo manually."""
-    from agents.storage import generate_id
-
     log.info(f"Creating todo manually: {todo.title}")
 
-    new_todo = {
-        "id": generate_id(),
-        "title": todo.title,
-        "description": todo.description,
-        "priority": todo.priority,
-        "status": "pending",
-        "source_document_id": "",
-        "source_text": "",
-    }
+    new_todo = TodoItem(
+        id=generate_id(),
+        title=todo.title,
+        description=todo.description,
+        parent_id=todo.parent_id,
+        status="pending",
+    )
 
     saved = save_todo(new_todo)
-    log.info(f"Created todo: {saved['id']}")
-    return saved
+    log.info(f"Created todo: {saved.id}")
+    return saved.model_dump(exclude_none=True)
 
 
 @router.patch("/todos/{todo_id}")
-async def update_todo(todo_id: str, updates: TodoUpdate):
+async def update_todo(todo_id: str, updates: TodoUpdateRequest):
     """Update a todo."""
     log.info(f"Updating todo: {todo_id}")
 
@@ -113,15 +109,22 @@ async def update_todo(todo_id: str, updates: TodoUpdate):
         log.warning(f"Todo not found: {todo_id}")
         raise HTTPException(status_code=404, detail="Todo not found")
 
-    update_dict = updates.model_dump(exclude_none=True)
-    log.debug(f"Updates: {update_dict}")
+    # Build updated data
+    updated_data = existing.model_dump()
 
-    for key, value in update_dict.items():
-        existing[key] = value
+    if updates.title is not None:
+        updated_data["title"] = updates.title
 
-    saved = save_todo(existing)
+    if updates.description is not None:
+        updated_data["description"] = updates.description
+
+    if updates.status is not None:
+        updated_data["status"] = updates.status
+
+    updated_todo = TodoItem.model_validate(updated_data)
+    saved = save_todo(updated_todo)
     log.info(f"Updated todo: {todo_id}")
-    return saved
+    return saved.model_dump(exclude_none=True)
 
 
 @router.delete("/todos/{todo_id}")

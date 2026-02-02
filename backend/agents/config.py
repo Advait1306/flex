@@ -2,6 +2,7 @@ import os
 
 from dotenv import load_dotenv
 from langchain_openai import ChatOpenAI
+from pydantic import SecretStr
 
 from .logging_config import get_logger
 
@@ -25,7 +26,7 @@ def get_llm() -> ChatOpenAI:
 
     return ChatOpenAI(
         model=model,
-        api_key=api_key,
+        api_key=SecretStr(api_key),
         base_url="https://openrouter.ai/api/v1",
         temperature=0.1,
     )

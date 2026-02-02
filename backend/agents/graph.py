@@ -1,4 +1,5 @@
 from langgraph.graph import END, START, StateGraph
+from langgraph.graph.state import CompiledStateGraph
 from langgraph.types import Send
 
 from .logging_config import get_logger
@@ -21,12 +22,12 @@ def route_tasks(state: PipelineState) -> list[Send]:
 
     # Fan out to todo creators for new tasks
     for task in new_tasks:
-        log.debug(f"Routing new task: {task.get('title', 'Untitled')}")
+        log.debug(f"Routing new task: {task.title}")
         sends.append(Send("todo_creator", {"task": task}))
 
     # Fan out to triage agents for updates
     for update in update_tasks:
-        log.debug(f"Routing update for todo: {update.get('todo_id')}")
+        log.debug(f"Routing update for todo: {update.todo_id}")
         sends.append(Send("triage_agent", {"update": update}))
 
     # If no tasks, go directly to end
@@ -54,7 +55,7 @@ def finalize(state: PipelineState) -> dict:
     return {"status": "completed"}
 
 
-def create_pipeline_graph() -> StateGraph:
+def create_pipeline_graph() -> CompiledStateGraph:
     """Create and compile the pipeline graph."""
     log.info("Creating pipeline graph")
 
@@ -101,10 +102,14 @@ async def run_pipeline(document_id: str, document_content: list[dict]) -> dict:
 
     log.info(f"Pipeline finished for document: {document_id}")
 
+    # Convert TodoItem models to dicts for JSON response
+    created_todos = [t.model_dump(exclude_none=True) for t in result.get("created_todos", [])]
+    updated_todos = [t.model_dump(exclude_none=True) for t in result.get("updated_todos", [])]
+
     return {
         "document_id": document_id,
-        "created_todos": result.get("created_todos", []),
-        "updated_todos": result.get("updated_todos", []),
+        "created_todos": created_todos,
+        "updated_todos": updated_todos,
         "errors": result.get("errors", []),
         "status": result.get("status", "completed"),
     }

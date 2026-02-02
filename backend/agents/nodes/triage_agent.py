@@ -1,5 +1,5 @@
 from ..logging_config import get_logger
-from ..state import TriageState
+from ..state import TodoItem, TriageState
 from ..storage import load_todo, save_todo
 
 log = get_logger("triage")
@@ -8,14 +8,9 @@ log = get_logger("triage")
 def triage_agent(state: TriageState) -> dict:
     """Update an existing todo based on update instructions."""
     update = state["update"]
-    todo_id = update.get("todo_id")
+    todo_id = update.todo_id
 
     log.info(f"Processing update for todo: {todo_id}")
-    log.info(f"Update payload: {update}")
-
-    if not todo_id:
-        log.error("No todo_id provided for update")
-        return {"updated_todos": [], "errors": ["No todo_id provided for update"]}
 
     try:
         existing_todo = load_todo(todo_id)
@@ -24,21 +19,25 @@ def triage_agent(state: TriageState) -> dict:
             log.warning(f"Todo not found: {todo_id}")
             return {"updated_todos": [], "errors": [f"Todo {todo_id} not found"]}
 
-        # Apply updates
-        updates = update.get("updates", {})
-        log.info(f"Applying updates to todo: {updates}")
+        # Build updated fields
+        updated_data = existing_todo.model_dump()
 
-        for key, value in updates.items():
-            old_value = existing_todo.get(key)
-            existing_todo[key] = value
-            log.info(f"  {key}: {old_value} -> {value}")
+        if update.title is not None:
+            log.info(f"  title: {existing_todo.title} -> {update.title}")
+            updated_data["title"] = update.title
 
-        # Track the update source
-        existing_todo["last_update_source"] = update.get("source_text", "")
+        if update.description is not None:
+            log.info(f"  description: {existing_todo.description} -> {update.description}")
+            updated_data["description"] = update.description
 
-        saved_todo = save_todo(existing_todo)
+        if update.status is not None:
+            log.info(f"  status: {existing_todo.status} -> {update.status}")
+            updated_data["status"] = update.status
 
-        log.info(f"Updated todo: {todo_id} - new status: {saved_todo.get('status')}")
+        updated_todo = TodoItem.model_validate(updated_data)
+        saved_todo = save_todo(updated_todo)
+
+        log.info(f"Updated todo: {todo_id} - new status: {saved_todo.status}")
 
         return {"updated_todos": [saved_todo], "errors": []}
     except Exception as e:

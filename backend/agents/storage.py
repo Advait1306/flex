@@ -1,9 +1,9 @@
 import json
 import uuid
 from pathlib import Path
-from filelock import FileLock
-from .state import TaskItem
+
 from .logging_config import get_logger
+from .state import TodoItem
 
 log = get_logger("storage")
 
@@ -21,25 +21,19 @@ def get_todo_path(todo_id: str) -> Path:
     return STORAGE_DIR / f"{todo_id}.json"
 
 
-def save_todo(todo: dict) -> dict:
+def save_todo(todo: TodoItem) -> TodoItem:
     """Save a todo to storage."""
-    if "id" not in todo:
-        todo["id"] = generate_id()
+    path = get_todo_path(todo.id)
+    log.info(f"Saving todo: {todo.id} - {todo.title}")
 
-    path = get_todo_path(todo["id"])
-    lock_path = path.with_suffix(".lock")
-
-    log.info(f"Saving todo: {todo['id']} - {todo.get('title', 'Untitled')}")
-
-    with FileLock(lock_path):
-        with open(path, "w") as f:
-            json.dump(todo, f, indent=2)
+    with open(path, "w") as f:
+        json.dump(todo.model_dump(exclude_none=True), f, indent=2)
 
     log.debug(f"Todo saved to: {path}")
     return todo
 
 
-def load_todo(todo_id: str) -> dict | None:
+def load_todo(todo_id: str) -> TodoItem | None:
     """Load a todo from storage."""
     path = get_todo_path(todo_id)
 
@@ -47,22 +41,21 @@ def load_todo(todo_id: str) -> dict | None:
         log.warning(f"Todo not found: {todo_id}")
         return None
 
-    lock_path = path.with_suffix(".lock")
-
     log.debug(f"Loading todo: {todo_id}")
 
-    with FileLock(lock_path):
-        with open(path, "r") as f:
-            return json.load(f)
+    with open(path, "r") as f:
+        data = json.load(f)
+        return TodoItem.model_validate(data)
 
 
-def list_todos() -> list[dict]:
+def list_todos() -> list[TodoItem]:
     """List all todos."""
     todos = []
     for path in STORAGE_DIR.glob("*.json"):
         try:
             with open(path, "r") as f:
-                todos.append(json.load(f))
+                data = json.load(f)
+                todos.append(TodoItem.model_validate(data))
         except (json.JSONDecodeError, IOError) as e:
             log.error(f"Failed to load todo from {path}: {e}")
             continue
@@ -74,12 +67,9 @@ def list_todos() -> list[dict]:
 def delete_todo(todo_id: str) -> bool:
     """Delete a todo."""
     path = get_todo_path(todo_id)
-    lock_path = path.with_suffix(".lock")
 
     if path.exists():
         path.unlink()
-        if lock_path.exists():
-            lock_path.unlink()
         log.info(f"Deleted todo: {todo_id}")
         return True
 
@@ -87,12 +77,12 @@ def delete_todo(todo_id: str) -> bool:
     return False
 
 
-def find_todo_by_title(title: str) -> dict | None:
+def find_todo_by_title(title: str) -> TodoItem | None:
     """Find a todo by title (case-insensitive partial match)."""
     title_lower = title.lower()
     for todo in list_todos():
-        if title_lower in todo.get("title", "").lower():
-            log.debug(f"Found todo by title '{title}': {todo['id']}")
+        if title_lower in todo.title.lower():
+            log.debug(f"Found todo by title '{title}': {todo.id}")
             return todo
     log.debug(f"No todo found with title: {title}")
     return None
