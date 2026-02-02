@@ -51,9 +51,22 @@ npm install
 npm run dev
 ```
 
+## Agent Pipeline
+
+Run the LangGraph agent pipeline to extract tasks from text:
+
+```bash
+./pipeline.sh "Buy milk, fix login bug, call mom"
+```
+
 ## API Endpoints
 
 | Method | Endpoint      | Description         |
 |--------|---------------|---------------------|
 | GET    | `/`           | Hello message       |
 | GET    | `/api/health` | Health check        |
+| POST   | `/api/pipeline/run` | Run agent pipeline on a document |
+| GET    | `/api/todos`  | List all todos      |
+| POST   | `/api/todos`  | Create a todo       |
+| PATCH  | `/api/todos/{id}` | Update a todo   |
+| DELETE | `/api/todos/{id}` | Delete a todo   |

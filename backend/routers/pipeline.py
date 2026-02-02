@@ -1,0 +1,136 @@
+from fastapi import APIRouter, HTTPException
+from pydantic import BaseModel
+from typing import Any
+import json
+from pathlib import Path
+
+from agents import run_pipeline
+from agents.storage import list_todos, load_todo, delete_todo, save_todo
+from agents.logging_config import get_logger
+
+log = get_logger("api.pipeline")
+
+router = APIRouter(prefix="/api", tags=["pipeline"])
+
+# Storage path for documents
+STORAGE_DIR = Path(__file__).parent.parent.parent / "storage"
+DOCUMENTS_FILE = STORAGE_DIR / "documents.json"
+
+
+def load_documents() -> dict:
+    """Load documents from storage."""
+    if DOCUMENTS_FILE.exists():
+        with open(DOCUMENTS_FILE, "r") as f:
+            return json.load(f)
+    return {"documents": {}, "order": []}
+
+
+class PipelineRequest(BaseModel):
+    document_id: str
+
+
+class TodoCreate(BaseModel):
+    title: str
+    description: str = ""
+    priority: str = "medium"
+
+
+class TodoUpdate(BaseModel):
+    title: str | None = None
+    description: str | None = None
+    priority: str | None = None
+    status: str | None = None
+
+
+@router.post("/pipeline/run")
+async def run_pipeline_endpoint(request: PipelineRequest):
+    """Run the agent pipeline on a document."""
+    log.info(f"Pipeline run requested for document: {request.document_id}")
+
+    # Load document content
+    data = load_documents()
+    document_content = data["documents"].get(request.document_id)
+
+    if document_content is None:
+        log.warning(f"Document not found: {request.document_id}")
+        raise HTTPException(status_code=404, detail="Document not found")
+
+    result = await run_pipeline(request.document_id, document_content)
+
+    log.info(f"Pipeline completed: {len(result.get('created_todos', []))} created, {len(result.get('updated_todos', []))} updated")
+
+    return result
+
+
+@router.get("/todos")
+async def get_todos():
+    """Get all todos."""
+    log.debug("Listing all todos")
+    todos = list_todos()
+    return {"todos": todos}
+
+
+@router.get("/todos/{todo_id}")
+async def get_todo(todo_id: str):
+    """Get a specific todo."""
+    log.debug(f"Getting todo: {todo_id}")
+    todo = load_todo(todo_id)
+    if not todo:
+        log.warning(f"Todo not found: {todo_id}")
+        raise HTTPException(status_code=404, detail="Todo not found")
+    return todo
+
+
+@router.post("/todos")
+async def create_todo(todo: TodoCreate):
+    """Create a new todo manually."""
+    from agents.storage import generate_id
+
+    log.info(f"Creating todo manually: {todo.title}")
+
+    new_todo = {
+        "id": generate_id(),
+        "title": todo.title,
+        "description": todo.description,
+        "priority": todo.priority,
+        "status": "pending",
+        "source_document_id": "",
+        "source_text": "",
+    }
+
+    saved = save_todo(new_todo)
+    log.info(f"Created todo: {saved['id']}")
+    return saved
+
+
+@router.patch("/todos/{todo_id}")
+async def update_todo(todo_id: str, updates: TodoUpdate):
+    """Update a todo."""
+    log.info(f"Updating todo: {todo_id}")
+
+    existing = load_todo(todo_id)
+    if not existing:
+        log.warning(f"Todo not found: {todo_id}")
+        raise HTTPException(status_code=404, detail="Todo not found")
+
+    update_dict = updates.model_dump(exclude_none=True)
+    log.debug(f"Updates: {update_dict}")
+
+    for key, value in update_dict.items():
+        existing[key] = value
+
+    saved = save_todo(existing)
+    log.info(f"Updated todo: {todo_id}")
+    return saved
+
+
+@router.delete("/todos/{todo_id}")
+async def delete_todo_endpoint(todo_id: str):
+    """Delete a todo."""
+    log.info(f"Deleting todo: {todo_id}")
+
+    if delete_todo(todo_id):
+        return {"status": "deleted"}
+
+    log.warning(f"Todo not found for deletion: {todo_id}")
+    raise HTTPException(status_code=404, detail="Todo not found")

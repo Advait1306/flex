@@ -6,7 +6,12 @@ from pathlib import Path
 import uuid
 import json
 
+from routers import pipeline_router
+
 app = FastAPI()
+
+# Include routers
+app.include_router(pipeline_router)
 
 app.add_middleware(
     CORSMiddleware,
