@@ -27,3 +27,6 @@ Thumbs.db
 *.pyc
 *.pyo
 .Python
+
+# Local storage
+storage/
