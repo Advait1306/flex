@@ -3,58 +3,88 @@
 import { useCreateBlockNote } from "@blocknote/react";
 import { BlockNoteView } from "@blocknote/shadcn";
 import "@blocknote/shadcn/style.css";
-import { Block } from "@blocknote/core";
-import { useCallback, useEffect, useRef } from "react";
+import { Block, BlockNoteEditor } from "@blocknote/core";
+import {
+  useCallback,
+  useEffect,
+  useRef,
+  useImperativeHandle,
+  forwardRef,
+} from "react";
+
+export interface BlockEditorHandle {
+  insertText: (text: string) => void;
+  focus: () => void;
+  getEditor: () => BlockNoteEditor;
+}
 
 interface BlockEditorProps {
   docId: string;
   initialContent?: Block[];
   onChange?: (docId: string, content: Block[]) => void;
+  onFocus?: () => void;
 }
 
-export function BlockEditor({
-  docId,
-  initialContent,
-  onChange,
-}: BlockEditorProps) {
-  const saveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+export const BlockEditor = forwardRef<BlockEditorHandle, BlockEditorProps>(
+  function BlockEditor({ docId, initialContent, onChange, onFocus }, ref) {
+    const saveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
-  const editor = useCreateBlockNote({
-    initialContent: initialContent?.length ? initialContent : undefined,
-    placeholders: {
-      default: "Enter text...",
-    },
-  });
+    const editor = useCreateBlockNote({
+      initialContent: initialContent?.length ? initialContent : undefined,
+      placeholders: {
+        default: "Enter text...",
+      },
+    });
 
-  const handleChange = useCallback(() => {
-    if (saveTimeoutRef.current) {
-      clearTimeout(saveTimeoutRef.current);
-    }
+    useImperativeHandle(
+      ref,
+      () => ({
+        insertText: (text: string) => {
+          editor.focus();
+          editor.insertInlineContent([{ type: "text", text: text + " " }]);
+        },
+        focus: () => {
+          editor.focus();
+        },
+        getEditor: () => editor,
+      }),
+      [editor]
+    );
 
-    saveTimeoutRef.current = setTimeout(() => {
-      const content = editor.document;
-      onChange?.(docId, content);
-    }, 500);
-  }, [editor, docId, onChange]);
-
-  useEffect(() => {
-    return () => {
+    const handleChange = useCallback(() => {
       if (saveTimeoutRef.current) {
         clearTimeout(saveTimeoutRef.current);
       }
-    };
-  }, []);
 
-  return (
-    <div className="w-full">
-      <BlockNoteView
-        editor={editor}
-        onChange={handleChange}
-        theme="light"
-        sideMenu={false}
-        slashMenu={false}
-        formattingToolbar={false}
-      />
-    </div>
-  );
-}
+      saveTimeoutRef.current = setTimeout(() => {
+        const content = editor.document;
+        onChange?.(docId, content);
+      }, 500);
+    }, [editor, docId, onChange]);
+
+    useEffect(() => {
+      return () => {
+        if (saveTimeoutRef.current) {
+          clearTimeout(saveTimeoutRef.current);
+        }
+      };
+    }, []);
+
+    const handleFocus = useCallback(() => {
+      onFocus?.();
+    }, [onFocus]);
+
+    return (
+      <div className="w-full" onFocus={handleFocus}>
+        <BlockNoteView
+          editor={editor}
+          onChange={handleChange}
+          theme="light"
+          sideMenu={false}
+          slashMenu={false}
+          formattingToolbar={false}
+        />
+      </div>
+    );
+  }
+);

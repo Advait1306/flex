@@ -1,9 +1,10 @@
 "use client";
 
-import { useCallback, useRef, useEffect } from "react";
+import { useCallback, useRef, useEffect, createRef } from "react";
 import useSWR from "swr";
 import { api, fetcher } from "@/lib/axios";
-import { BlockEditor } from "./BlockEditor";
+import { BlockEditor, BlockEditorHandle } from "./BlockEditor";
+import { VoiceInputButton } from "./VoiceInputButton";
 import { Block } from "@blocknote/core";
 
 interface Document {
@@ -13,6 +14,10 @@ interface Document {
 
 export function DocumentFeed() {
   const initializedRef = useRef(false);
+  const editorRefs = useRef<Map<string, React.RefObject<BlockEditorHandle | null>>>(
+    new Map()
+  );
+  const focusedEditorIdRef = useRef<string | null>(null);
 
   const { data, error, isLoading, mutate } = useSWR<{ documents: Document[] }>(
     "/api/documents",
@@ -20,6 +25,13 @@ export function DocumentFeed() {
   );
 
   const documents = data?.documents || [];
+
+  const getEditorRef = useCallback((docId: string) => {
+    if (!editorRefs.current.has(docId)) {
+      editorRefs.current.set(docId, createRef<BlockEditorHandle>());
+    }
+    return editorRefs.current.get(docId)!;
+  }, []);
 
   const createDocument = useCallback(async () => {
     try {
@@ -71,6 +83,29 @@ export function DocumentFeed() {
     [saveDocument, mutate]
   );
 
+  const handleEditorFocus = useCallback((docId: string) => {
+    focusedEditorIdRef.current = docId;
+  }, []);
+
+  const handleTranscript = useCallback((text: string) => {
+    const focusedId = focusedEditorIdRef.current;
+    if (focusedId) {
+      const ref = editorRefs.current.get(focusedId);
+      if (ref?.current) {
+        ref.current.insertText(text);
+        return;
+      }
+    }
+
+    if (documents.length > 0) {
+      const firstDocId = documents[0].id;
+      const ref = editorRefs.current.get(firstDocId);
+      if (ref?.current) {
+        ref.current.insertText(text);
+      }
+    }
+  }, [documents]);
+
   if (isLoading) {
     return (
       <div className="flex min-h-screen items-center justify-center">
@@ -93,9 +128,11 @@ export function DocumentFeed() {
         {documents.map((doc, index) => (
           <div key={doc.id} className="relative">
             <BlockEditor
+              ref={getEditorRef(doc.id)}
               docId={doc.id}
               initialContent={doc.content}
               onChange={handleDocumentChange}
+              onFocus={() => handleEditorFocus(doc.id)}
             />
             {index < documents.length - 1 && (
               <div className="my-4 border-t border-border/40" />
@@ -103,6 +140,8 @@ export function DocumentFeed() {
           </div>
         ))}
       </div>
+
+      <VoiceInputButton onTranscript={handleTranscript} />
     </div>
   );
 }
