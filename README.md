@@ -14,22 +14,28 @@ flex/
 
 ### Backend
 
-1. Create and activate a virtual environment (recommended):
+1. Create and activate a virtual environment:
    ```bash
    cd backend
-   python -m venv venv
-   source venv/bin/activate  # On Windows: venv\Scripts\activate
+   uv venv
+   source .venv/bin/activate  # On Windows: .venv\Scripts\activate
    ```
 
 2. Install dependencies:
    ```bash
-   pip install -r requirements.txt
+   uv pip install -r requirements.txt
    ```
 
 3. Start the server:
    ```bash
    uvicorn main:app --reload
    ```
+
+Or run directly without activating the venv:
+```bash
+cd backend
+uv run uvicorn main:app --reload
+```
 
 The API will be available at http://localhost:8000
 
