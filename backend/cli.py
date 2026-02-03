@@ -65,12 +65,12 @@ def main():
 
     elif args.command == "list_todos":
         todos = list_todos()
-        print(json.dumps(todos, indent=2))
+        print(json.dumps([t.model_dump(exclude_none=True) for t in todos], indent=2))
 
     elif args.command == "clear_todos":
         todos = list_todos()
         for todo in todos:
-            delete_todo(todo["id"])
+            delete_todo(todo.id)
         log.info(f"Deleted {len(todos)} todos")
 
 

@@ -8,6 +8,16 @@ def add(a: list, b: list) -> list:
     return a + b
 
 
+class MentionedItem(BaseModel):
+    """An item mentioned by the user that might become a task."""
+
+    text: str  # What was mentioned
+    intent: Literal["create", "update_status", "add_detail", "general"]
+    status_hint: Literal["pending", "in_progress", "completed"] | None = None
+    related_keywords: list[str] = []
+    background_info: str | None = None  # Relevant context from document for this specific item
+
+
 class TodoItem(BaseModel):
     """A todo task item."""
 
@@ -24,7 +34,7 @@ class NewTask(BaseModel):
     title: str = Field(description="A concise title for the task")
     description: str | None = Field(
         default=None,
-        description="Description only if the user provides specific details about the task",
+        description="ONLY if user explicitly provided details - never invent a description",
     )
     subtasks: list["NewTask"] | None = Field(
         default=None,
@@ -53,21 +63,13 @@ class PipelineState(TypedDict):
     trigger: str  # Text content to analyze for tasks (primary input)
     document_id: str  # Internal tracking ID
     document_content: list[dict]  # Context document (can be empty)
-    new_tasks: list[NewTask]
-    update_tasks: list[TodoUpdate]
     created_todos: Annotated[list[TodoItem], add]
     updated_todos: Annotated[list[TodoItem], add]
     errors: Annotated[list[str], add]
     status: Literal["pending", "scanning", "routing", "processing", "completed", "failed"]
 
 
-class TodoCreatorState(TypedDict):
-    """State for todo creator branch."""
+class TriagePayload(TypedDict):
+    """Payload sent to triage agent for a single mentioned item."""
 
-    task: NewTask
-
-
-class TriageState(TypedDict):
-    """State for triage agent branch."""
-
-    update: TodoUpdate
+    item: MentionedItem
