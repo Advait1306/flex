@@ -43,6 +43,22 @@ class DocumentContent(BaseModel):
     content: List[Any]
 
 
+def extract_text_from_blocks(blocks: List[Any]) -> str:
+    """Extract all text content from BlockNote blocks"""
+    texts = []
+    for block in blocks:
+        if isinstance(block, dict) and "content" in block:
+            content = block["content"]
+            if isinstance(content, list):
+                for item in content:
+                    if isinstance(item, dict) and "text" in item:
+                        texts.append(item["text"])
+        # Handle nested children blocks
+        if isinstance(block, dict) and "children" in block:
+            texts.append(extract_text_from_blocks(block["children"]))
+    return "".join(texts)
+
+
 @app.get("/")
 def read_root():
     return {"message": "Hello from FastAPI"}
@@ -80,6 +96,23 @@ def create_document():
 def save_document(doc_id: str, body: DocumentContent):
     """Save document content"""
     data = load_data()
+
+    # Get old content and extract text
+    old_content = data["documents"].get(doc_id, [])
+    old_text = extract_text_from_blocks(old_content)
+
+    # Extract text from new content
+    new_text = extract_text_from_blocks(body.content)
+
+    # Find and print only the new text
+    if new_text.startswith(old_text):
+        diff = new_text[len(old_text):]
+        if diff:
+            print(f"[NEW] {diff}")
+    elif new_text != old_text:
+        # Content changed in a non-append way
+        print(f"[CHANGED] {new_text}")
+
     data["documents"][doc_id] = body.content
     if doc_id not in data["order"]:
         data["order"].append(doc_id)

@@ -16,6 +16,7 @@ export interface BlockEditorHandle {
   insertText: (text: string) => void;
   focus: () => void;
   getEditor: () => BlockNoteEditor;
+  save: () => void;
 }
 
 interface BlockEditorProps {
@@ -28,6 +29,7 @@ interface BlockEditorProps {
 export const BlockEditor = forwardRef<BlockEditorHandle, BlockEditorProps>(
   function BlockEditor({ docId, initialContent, onChange, onFocus }, ref) {
     const saveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+    const lastContentRef = useRef<string>("");
 
     const editor = useCreateBlockNote({
       initialContent: initialContent?.length ? initialContent : undefined,
@@ -36,19 +38,31 @@ export const BlockEditor = forwardRef<BlockEditorHandle, BlockEditorProps>(
       },
     });
 
+    const save = useCallback(() => {
+      if (saveTimeoutRef.current) {
+        clearTimeout(saveTimeoutRef.current);
+        saveTimeoutRef.current = null;
+      }
+      const content = editor.document;
+      onChange?.(docId, content);
+    }, [editor, docId, onChange]);
+
     useImperativeHandle(
       ref,
       () => ({
         insertText: (text: string) => {
           editor.focus();
           editor.insertInlineContent([{ type: "text", text: text + " " }]);
+          console.log("[SAVE] audio");
+          save();
         },
         focus: () => {
           editor.focus();
         },
         getEditor: () => editor,
+        save,
       }),
-      [editor]
+      [editor, save]
     );
 
     const handleChange = useCallback(() => {
@@ -56,11 +70,42 @@ export const BlockEditor = forwardRef<BlockEditorHandle, BlockEditorProps>(
         clearTimeout(saveTimeoutRef.current);
       }
 
-      saveTimeoutRef.current = setTimeout(() => {
-        const content = editor.document;
-        onChange?.(docId, content);
-      }, 500);
-    }, [editor, docId, onChange]);
+      // Get current text content to detect sentence endings
+      const blocks = editor.document;
+      const currentText = blocks
+        .map((block) => {
+          if ("content" in block && Array.isArray(block.content)) {
+            return block.content
+              .map((item) => ("text" in item ? item.text : ""))
+              .join("");
+          }
+          return "";
+        })
+        .join("\n");
+
+      const prevText = lastContentRef.current;
+      lastContentRef.current = currentText;
+
+      // Check for sentence-ending punctuation or newline added
+      const trimmedText = currentText.replace(/\n+$/, "");
+      const lastChar = trimmedText.slice(-1);
+      const endsWithSentence = /[.!?]/.test(lastChar);
+      const newlineAdded = currentText.split("\n").length > prevText.split("\n").length;
+
+      if (endsWithSentence) {
+        console.log("[SAVE] punctuation");
+        save();
+      } else if (newlineAdded) {
+        console.log("[SAVE] newline");
+        save();
+      } else {
+        // Fallback: 1 second debounce
+        saveTimeoutRef.current = setTimeout(() => {
+          console.log("[SAVE] timeout");
+          save();
+        }, 1000);
+      }
+    }, [editor, save]);
 
     useEffect(() => {
       return () => {
