@@ -29,4 +29,8 @@ def get_llm() -> ChatOpenAI:
         api_key=SecretStr(api_key),
         base_url="https://openrouter.ai/api/v1",
         temperature=0.1,
+        default_headers={
+            "X-Title": "Flex",
+            "HTTP-Referer": "https://flex.consciousengines.com/",
+        },
     )

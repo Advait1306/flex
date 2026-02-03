@@ -1,5 +1,13 @@
 # Todo Extraction Pipeline Evaluation Plan
 
+> **⚠️ BLOCKED: Architecture Constraint**
+>
+> This plan is on hold until the search architecture is resolved. The current design assumes all existing todos are passed to the pipeline. However, the future architecture will use a **search tool** (keyword + vector-based) to find relevant todos dynamically during triage.
+>
+> **Impact:** The pipeline cannot be fully "pure" if it depends on search. Need to resolve how to mock/inject search for testing.
+
+---
+
 ## Overview
 
 This document outlines the evaluation framework for testing the AI pipeline that extracts todos from text. The pipeline consists of two main components:
@@ -31,7 +39,7 @@ class TestScenario(BaseModel):
 
 ```python
 class ExpectedTodo(BaseModel):
-    title: str                          # Expected title (semantic match)
+    title: str                          # Expected title
     description: str | None = None      # Expected description if any
     has_subtasks: bool = False          # Whether subtasks should be created
 
@@ -187,19 +195,7 @@ assert actual.status == expected.status
 assert len(actual.created_todos) == len(expected.creates)
 ```
 
-### 2. Semantic Similarity
-For title/description matching where exact match is too strict:
-
-```python
-from sentence_transformers import SentenceTransformer
-
-def semantic_match(actual: str, expected: str, threshold: float = 0.8) -> bool:
-    embeddings = model.encode([actual, expected])
-    similarity = cosine_similarity(embeddings[0], embeddings[1])
-    return similarity >= threshold
-```
-
-### 3. LLM-as-Judge
+### 2. LLM-as-Judge
 For complex semantic verification:
 
 ```python
@@ -232,7 +228,6 @@ def llm_judge(scenario: TestScenario, actual_output: PipelineResult) -> JudgeRes
 
 ### Phase 3: Verification
 - [ ] Implement exact match verification
-- [ ] Add semantic similarity matching
 - [ ] Set up LLM-as-judge for complex cases
 
 ### Phase 4: Integration
@@ -259,7 +254,6 @@ evals/
 │   └── llm_variation_generator.py
 ├── verification/
 │   ├── exact_match.py
-│   ├── semantic_match.py
 │   └── llm_judge.py
 ├── runner.py               # Main test runner
 └── results/                # Test run outputs
@@ -271,4 +265,150 @@ evals/
 - **Category Breakdown**: Pass rate per scenario category
 - **False Positives**: Created todos that shouldn't exist
 - **False Negatives**: Missed creates or updates
-- **Match Quality**: Semantic similarity scores for titles/descriptions
+
+---
+
+# Version 2: Pipeline Extraction Architecture
+
+This version extracts the pipeline into a separate package, making it a pure function without storage side effects.
+
+## New Architecture
+
+```
+pipeline/                 # NEW - Pure pipeline package
+├── __init__.py
+├── pyproject.toml
+├── graph.py              # Pipeline orchestration
+├── state.py              # Data models
+├── config.py             # LLM config
+└── nodes/
+    ├── context_collector.py
+    └── triage_agent.py   # Returns decisions only, no storage
+
+backend/
+├── agents/               # Thin wrapper
+│   ├── __init__.py       # Re-exports from pipeline
+│   └── storage.py        # Backend-specific storage
+├── routers/
+└── ...
+
+evals/
+├── storage/              # Test data storage (isolated)
+└── ...
+```
+
+## Pipeline Interface Change
+
+**Before (current):**
+```python
+# Triage agent loads todos from disk, saves results
+result = await run_pipeline(trigger, document_content)
+# Returns: {created_todos: [...], updated_todos: [...]}
+```
+
+**After (new):**
+```python
+# Caller passes existing todos, pipeline returns decisions
+result = await run_pipeline(trigger, document_content, existing_todos)
+# Returns: {
+#   decisions: [
+#     {action: "create", task: {title: "...", description: ...}},
+#     {action: "update", todo_id: "...", status: "completed"},
+#     {action: "ignore", reason: "..."}
+#   ]
+# }
+```
+
+## Files to Move/Modify
+
+1. **Move to `pipeline/`:**
+   - `backend/agents/graph.py` → `pipeline/graph.py`
+   - `backend/agents/state.py` → `pipeline/state.py`
+   - `backend/agents/config.py` → `pipeline/config.py`
+   - `backend/agents/logging_config.py` → `pipeline/logging_config.py`
+   - `backend/agents/nodes/context_collector.py` → `pipeline/nodes/context_collector.py`
+   - `backend/agents/nodes/triage_agent.py` → `pipeline/nodes/triage_agent.py` (refactor)
+
+2. **Keep in `backend/`:**
+   - `backend/agents/storage.py` (backend-specific)
+
+3. **Refactor `triage_agent.py`:**
+   - Remove `list_todos()` call - receive todos as parameter
+   - Remove `save_todo()`, `_create_todo()`, `_update_todo()` calls
+   - Return `TriageDecision` objects instead of executing them
+
+4. **Refactor `graph.py`:**
+   - Accept `existing_todos: list[TodoItem]` as input
+   - Pass existing todos to triage agent via state
+   - Return decisions instead of executed results
+
+## V2 Test Runner
+
+```python
+from pipeline import run_pipeline
+from pipeline.state import TodoItem
+
+async def run_scenario(scenario: TestScenario) -> TestResult:
+    # Convert scenario todos to TodoItem objects
+    existing_todos = [
+        TodoItem(
+            id=todo.get("id", f"test-{i}"),
+            title=todo["title"],
+            status=todo.get("status", "pending")
+        )
+        for i, todo in enumerate(scenario.existing_todos)
+    ]
+
+    # Run pipeline (pure function, no side effects)
+    result = await run_pipeline(
+        trigger=scenario.trigger,
+        document_content=scenario.document_content,
+        existing_todos=existing_todos
+    )
+
+    # Verify decisions match expectations
+    return verify(result.decisions, scenario.expected_decisions)
+```
+
+## V2 Implementation Order
+
+### Phase 1: Extract Pipeline
+1. Create `pipeline/` directory with `pyproject.toml`
+2. Move files from `backend/agents/` to `pipeline/`
+3. Refactor `triage_agent.py` to return decisions (no storage)
+4. Refactor `graph.py` to accept `existing_todos` parameter
+5. Update `backend/agents/` to import from pipeline and handle storage
+6. Verify backend still works
+
+### Phase 2: Build Eval Framework
+1. Create `evals/` structure with `pyproject.toml`
+2. Implement `models.py` (scenario data structures)
+3. Implement `loader.py` (YAML loading)
+4. Implement `runner.py` (test execution)
+5. Implement `verification/exact_match.py`
+6. Implement `cli.py` (Typer)
+
+## V2 Dependencies
+
+### `pipeline/pyproject.toml`
+```toml
+[project]
+name = "flex-pipeline"
+dependencies = [
+    "langchain>=1.2.7",
+    "langchain-openai>=1.1.7",
+    "langgraph>=1.0.7",
+    "pydantic>=2.0",
+]
+```
+
+### `evals/pyproject.toml`
+```toml
+[project]
+name = "flex-evals"
+dependencies = [
+    "flex-pipeline",  # Local dependency
+    "pyyaml>=6.0",
+    "typer>=0.9",
+]
+```
