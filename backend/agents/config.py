@@ -11,6 +11,21 @@ load_dotenv()
 log = get_logger("config")
 
 
+def get_embedding_model() -> str:
+    """Get the configured embedding model name."""
+    return os.getenv("EMBEDDING_MODEL", "openai/text-embedding-3-small")
+
+
+def get_qdrant_host() -> str:
+    """Get the Qdrant host."""
+    return os.getenv("QDRANT_HOST", "localhost")
+
+
+def get_qdrant_port() -> int:
+    """Get the Qdrant port."""
+    return int(os.getenv("QDRANT_PORT", "6333"))
+
+
 def get_llm() -> ChatOpenAI:
     """Get the configured LLM instance using OpenRouter."""
     api_key = os.getenv("OPENROUTER_API_KEY")

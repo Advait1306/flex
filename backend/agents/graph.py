@@ -1,7 +1,7 @@
 from langgraph.graph import END, START, StateGraph
 from langgraph.graph.state import CompiledStateGraph
 
-from .logging_config import get_logger
+from .logging_config import get_logger, start_pipeline_log
 from .nodes.context_collector import context_collector
 from .nodes.triage_agent import triage_agent
 from .state import PipelineState
@@ -62,9 +62,13 @@ async def run_pipeline(
     """Run the pipeline on a trigger with optional document context."""
     import uuid
 
+    # Start a new log file for this pipeline run
+    log_file = start_pipeline_log()
+
     # Auto-generate document_id for tracking if not provided
     doc_id = document_id or f"cli-{uuid.uuid4().hex[:8]}"
     log.info(f"Starting pipeline for document: {doc_id}")
+    log.info(f"Log file: {log_file}")
 
     initial_state: PipelineState = {
         "trigger": trigger,
