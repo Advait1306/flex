@@ -23,7 +23,9 @@ class ScanResult(BaseModel):
     )
 
 
-SCANNER_SYSTEM_PROMPT = """You are a document analyzer that extracts tasks and status updates.
+SCANNER_SYSTEM_PROMPT = """You are a task analyzer that extracts tasks and status updates from user input.
+
+The user's message is the primary input to analyze. If document context is provided, use it to understand references and background, but extract tasks from what the user explicitly says.
 
 IMPORTANT RULES:
 - ALWAYS prefer updating existing todos over creating new ones
@@ -53,9 +55,23 @@ EXAMPLES:
 - User says "Need to buy groceries" → ONE new task, NO subtasks (don't decompose into "make list", "go to store", etc.)"""
 
 
+def extract_text_from_blocks(blocks: list[dict]) -> str:
+    """Extract text content from BlockNote blocks."""
+    if not blocks:
+        return ""
+    text_parts = []
+    for block in blocks:
+        if isinstance(block, dict):
+            content = block.get("content", [])
+            for item in content:
+                if isinstance(item, dict) and "text" in item:
+                    text_parts.append(item["text"])
+    return "\n".join(text_parts)
+
+
 def document_scanner(state: PipelineState) -> dict:
-    """Scan document and extract tasks."""
-    log.info(f"Scanning document: {state['document_id']}")
+    """Scan trigger text and extract tasks, using document as optional context."""
+    log.info(f"Scanning trigger for document: {state['document_id']}")
 
     llm = get_llm().with_structured_output(ScanResult, method="function_calling")
 
@@ -75,35 +91,32 @@ def document_scanner(state: PipelineState) -> dict:
             parent_info = f" (subtask of {t.parent_id[:8]}...)" if t.parent_id else ""
             log.info(f"  Existing: {t.id[:8]}... - {t.title} ({t.status}){parent_info}")
 
-    # Convert document content to text
-    doc_content = state["document_content"]
-    if isinstance(doc_content, list):
-        # BlockNote format - extract text from blocks
-        text_parts = []
-        for block in doc_content:
-            if isinstance(block, dict):
-                content = block.get("content", [])
-                for item in content:
-                    if isinstance(item, dict) and "text" in item:
-                        text_parts.append(item["text"])
-        doc_text = "\n".join(text_parts)
-    else:
-        doc_text = str(doc_content)
+    # Get trigger text (primary input)
+    trigger_text = state["trigger"]
+    log.debug(f"Trigger text length: {len(trigger_text)} chars")
 
-    log.debug(f"Document text length: {len(doc_text)} chars")
-
-    if not doc_text.strip():
-        log.warning("Document is empty")
+    if not trigger_text.strip():
+        log.warning("Trigger text is empty")
         return {
             "new_tasks": [],
             "update_tasks": [],
             "status": "completed",
-            "errors": ["Document is empty"],
+            "errors": ["Trigger text is empty"],
         }
+
+    # Extract document context (optional)
+    doc_text = extract_text_from_blocks(state.get("document_content", []))
+    if doc_text:
+        log.debug(f"Document context length: {len(doc_text)} chars")
+
+    # Build the human message with trigger and optional document context
+    human_content = f"Analyze this for tasks:\n\n{trigger_text}"
+    if doc_text:
+        human_content += f"\n\nDocument context:\n{doc_text}"
 
     messages = [
         SystemMessage(content=SCANNER_SYSTEM_PROMPT + existing_context),
-        HumanMessage(content=f"Analyze this document:\n\n{doc_text}"),
+        HumanMessage(content=human_content),
     ]
 
     try:

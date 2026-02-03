@@ -77,6 +77,27 @@ def delete_todo(todo_id: str) -> bool:
     return False
 
 
+DOCUMENTS_FILE = Path(__file__).parent.parent.parent / "storage" / "documents.json"
+
+
+def load_document(document_id: str) -> list[dict] | None:
+    """Load a document's content from storage."""
+    if not DOCUMENTS_FILE.exists():
+        log.warning(f"Documents file not found: {DOCUMENTS_FILE}")
+        return None
+
+    with open(DOCUMENTS_FILE, "r") as f:
+        data = json.load(f)
+
+    content = data.get("documents", {}).get(document_id)
+    if content is None:
+        log.warning(f"Document not found: {document_id}")
+        return None
+
+    log.debug(f"Loaded document: {document_id}")
+    return content
+
+
 def find_todo_by_title(title: str) -> TodoItem | None:
     """Find a todo by title (case-insensitive partial match)."""
     title_lower = title.lower()

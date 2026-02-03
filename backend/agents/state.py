@@ -50,8 +50,9 @@ class TodoUpdate(BaseModel):
 class PipelineState(TypedDict):
     """Main pipeline state."""
 
-    document_id: str
-    document_content: list[dict]
+    trigger: str  # Text content to analyze for tasks (primary input)
+    document_id: str  # Internal tracking ID
+    document_content: list[dict]  # Context document (can be empty)
     new_tasks: list[NewTask]
     update_tasks: list[TodoUpdate]
     created_todos: Annotated[list[TodoItem], add]

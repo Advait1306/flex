@@ -83,13 +83,18 @@ def create_pipeline_graph() -> CompiledStateGraph:
 pipeline_graph = create_pipeline_graph()
 
 
-async def run_pipeline(document_id: str, document_content: list[dict]) -> dict:
-    """Run the pipeline on a document."""
-    log.info(f"Starting pipeline for document: {document_id}")
+async def run_pipeline(trigger: str, document_content: list[dict] | None = None, document_id: str | None = None) -> dict:
+    """Run the pipeline on a trigger with optional document context."""
+    import uuid
+
+    # Auto-generate document_id for tracking if not provided
+    doc_id = document_id or f"cli-{uuid.uuid4().hex[:8]}"
+    log.info(f"Starting pipeline for document: {doc_id}")
 
     initial_state: PipelineState = {
-        "document_id": document_id,
-        "document_content": document_content,
+        "trigger": trigger,
+        "document_id": doc_id,
+        "document_content": document_content or [],
         "new_tasks": [],
         "update_tasks": [],
         "created_todos": [],
@@ -100,14 +105,14 @@ async def run_pipeline(document_id: str, document_content: list[dict]) -> dict:
 
     result = await pipeline_graph.ainvoke(initial_state)
 
-    log.info(f"Pipeline finished for document: {document_id}")
+    log.info(f"Pipeline finished for document: {doc_id}")
 
     # Convert TodoItem models to dicts for JSON response
     created_todos = [t.model_dump(exclude_none=True) for t in result.get("created_todos", [])]
     updated_todos = [t.model_dump(exclude_none=True) for t in result.get("updated_todos", [])]
 
     return {
-        "document_id": document_id,
+        "document_id": doc_id,
         "created_todos": created_todos,
         "updated_todos": updated_todos,
         "errors": result.get("errors", []),

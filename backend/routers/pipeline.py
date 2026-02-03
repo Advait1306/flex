@@ -27,7 +27,8 @@ def load_documents() -> dict:
 
 
 class PipelineRequest(BaseModel):
-    document_id: str
+    trigger: str
+    document_id: str | None = None  # Optional - loads document as context
 
 
 class TodoCreate(BaseModel):
@@ -44,18 +45,19 @@ class TodoUpdateRequest(BaseModel):
 
 @router.post("/pipeline/run")
 async def run_pipeline_endpoint(request: PipelineRequest):
-    """Run the agent pipeline on a document."""
-    log.info(f"Pipeline run requested for document: {request.document_id}")
+    """Run the agent pipeline on a trigger with optional document context."""
+    log.info(f"Pipeline run requested with trigger: {request.trigger[:50]}...")
 
-    # Load document content
-    data = load_documents()
-    document_content = data["documents"].get(request.document_id)
+    # Load document content if document_id provided
+    document_content = None
+    if request.document_id:
+        data = load_documents()
+        document_content = data["documents"].get(request.document_id)
+        if document_content is None:
+            log.warning(f"Document not found: {request.document_id}")
+            raise HTTPException(status_code=404, detail="Document not found")
 
-    if document_content is None:
-        log.warning(f"Document not found: {request.document_id}")
-        raise HTTPException(status_code=404, detail="Document not found")
-
-    result = await run_pipeline(request.document_id, document_content)
+    result = await run_pipeline(request.trigger, document_content, request.document_id)
 
     log.info(f"Pipeline completed: {len(result.get('created_todos', []))} created, {len(result.get('updated_todos', []))} updated")
 

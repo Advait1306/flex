@@ -14,15 +14,22 @@ from agents.logging_config import setup_logging, get_logger
 log = get_logger("cli")
 
 
-async def run_on_text(text: str) -> dict:
-    """Run pipeline on raw text."""
-    # Convert text to BlockNote-like format
-    document_content = [{"content": [{"text": text}]}]
-    document_id = f"cli-{uuid.uuid4().hex[:8]}"
+async def run_on_text(text: str, document_id: str | None = None) -> dict:
+    """Run pipeline on text trigger with optional document context."""
+    from agents.storage import load_document
 
-    log.info(f"Running pipeline on text ({len(text)} chars)")
+    document_content = None
 
-    result = await run_pipeline(document_id, document_content)
+    # If document_id provided, load document as context
+    if document_id:
+        log.info(f"Loading document {document_id} for context")
+        document_content = load_document(document_id)
+        if document_content is None:
+            log.warning(f"Document not found: {document_id}")
+
+    log.info(f"Running pipeline on trigger ({len(text)} chars)")
+
+    result = await run_pipeline(text, document_content, document_id)
     return result
 
 
@@ -33,7 +40,8 @@ def main():
 
     # run_pipeline command
     run_parser = subparsers.add_parser("run_pipeline", help="Run pipeline on text")
-    run_parser.add_argument("text", help="Text to process")
+    run_parser.add_argument("text", help="Trigger text to process")
+    run_parser.add_argument("--document-id", "-d", help="Document ID for context (optional)")
 
     # list_todos command
     subparsers.add_parser("list_todos", help="List all todos")
@@ -49,7 +57,7 @@ def main():
 
     if args.command == "run_pipeline":
         log.info("Starting pipeline")
-        result = asyncio.run(run_on_text(args.text))
+        result = asyncio.run(run_on_text(args.text, args.document_id))
         print("\n" + "=" * 50)
         print("RESULT:")
         print("=" * 50)
