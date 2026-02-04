@@ -85,7 +85,7 @@ export function FactsList() {
   const { data, error, isLoading } = useSWR<{ facts: Fact[] }>(
     "/api/facts",
     fetcher,
-    { refreshInterval: 5000 }
+    { refreshInterval: 500 }
   );
 
   const facts = data?.facts || [];

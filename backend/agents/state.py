@@ -8,16 +8,11 @@ def add(a: list, b: list) -> list:
     return a + b
 
 
-class MentionedItem(BaseModel):
-    """An item mentioned by the user that might become a task."""
+class TriagePayload(BaseModel):
+    """Payload sent to triage agent for a single item."""
 
     text: str  # What was mentioned
-    intent: Literal["create", "update_status", "add_detail", "general"]
-    status_hint: Literal["pending", "in_progress", "completed"] | None = None
-    related_keywords: list[str] = []
-    background_info: str | None = (
-        None  # Relevant context from document for this specific item
-    )
+    context: str = ""  # Background from document context
 
 
 class FactItem(BaseModel):
@@ -88,7 +83,3 @@ class PipelineState(TypedDict):
     ]
 
 
-class TriagePayload(TypedDict):
-    """Payload sent to triage agent for a single mentioned item."""
-
-    item: MentionedItem

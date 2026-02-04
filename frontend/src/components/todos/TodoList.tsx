@@ -113,7 +113,7 @@ export function TodoList() {
   const { data, error, isLoading } = useSWR<{ todos: Todo[] }>(
     "/api/todos",
     fetcher,
-    { refreshInterval: 2000 }
+    { refreshInterval: 500 }
   );
 
   const toggleExpanded = (id: string) => {

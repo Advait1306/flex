@@ -27,25 +27,41 @@ def get_qdrant_port() -> int:
 
 
 def get_llm() -> ChatOpenAI:
-    """Get the configured LLM instance using OpenRouter."""
-    api_key = os.getenv("OPENROUTER_API_KEY")
-    model = os.getenv("LLM", "openai/gpt-5-mini")
+    """Get the configured LLM instance."""
+    provider = os.getenv("PROVIDER", "OpenAI").lower()
 
+    api_key = os.getenv("OPENROUTER_API_KEY")
     if not api_key:
         raise ValueError("OPENROUTER_API_KEY is not set")
 
-    if not model:
-        raise ValueError("LLM is not set")
+    if provider == "cerebras":
+        model = os.getenv("LLM", "openai/gpt-oss-120b")
 
-    log.info(f"Initializing LLM: {model}")
+        log.info(f"Initializing Cerebras LLM via OpenRouter: {model}")
 
-    return ChatOpenAI(
-        model=model,
-        api_key=SecretStr(api_key),
-        base_url="https://openrouter.ai/api/v1",
-        temperature=0.1,
-        default_headers={
-            "X-Title": "Flex",
-            "HTTP-Referer": "https://flex.consciousengines.com/",
-        },
-    )
+        return ChatOpenAI(
+            model=model,
+            api_key=SecretStr(api_key),
+            base_url="https://openrouter.ai/api/v1",
+            temperature=0.1,
+            default_headers={
+                "X-Title": "Flex",
+                "HTTP-Referer": "https://flex.consciousengines.com/",
+            },
+            extra_body={"provider": {"order": ["cerebras"]}},
+        )
+    else:
+        # Default: OpenAI
+        model = os.getenv("LLM", "openai/gpt-5-mini")
+        log.info(f"Initializing OpenAI LLM: {model}")
+
+        return ChatOpenAI(
+            model=model,
+            api_key=SecretStr(api_key),
+            base_url="https://openrouter.ai/api/v1",
+            temperature=0.1,
+            default_headers={
+                "X-Title": "Flex",
+                "HTTP-Referer": "https://flex.consciousengines.com/",
+            },
+        )

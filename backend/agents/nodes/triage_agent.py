@@ -5,7 +5,7 @@ from typing import Literal
 
 from langchain_core.messages import AIMessage, HumanMessage, SystemMessage, ToolMessage
 from langchain_core.tools import tool
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
 
 from ..config import get_llm
 from ..logging_config import AgentLog, get_logger
@@ -23,7 +23,7 @@ from ..qdrant_store import (
 )
 from ..search import SearchResult
 from ..search import search_todos as _search_todos
-from ..state import FactItem, MentionedItem, NewTask, TodoItem, TriagePayload
+from ..state import FactItem, NewTask, TodoItem, TriagePayload
 
 log = get_logger("triage_agent")
 
@@ -63,8 +63,19 @@ class TriageDecision(BaseModel):
     reason: str = Field(description="Brief explanation of the decision")
     tags: list[str] = Field(
         default_factory=list,
-        description="2-5 key searchable tags/topics for this todo (e.g., 'authentication', 'JWT', 'login flow'). Only for create/update actions.",
+        description="REQUIRED for create/update: 2-5 key searchable tags/topics for this todo (e.g., 'standups', 'waitlist', 'felix'). Never skip tags for create/update actions.",
     )
+
+    @field_validator("tags", mode="before")
+    @classmethod
+    def parse_tags(cls, v):
+        """Parse tags if they come as a JSON string."""
+        if isinstance(v, str):
+            try:
+                return json.loads(v)
+            except json.JSONDecodeError:
+                return [v]  # Treat as single tag if not valid JSON
+        return v
 
 
 @tool
@@ -176,7 +187,11 @@ def do_nothing(reason: str) -> str:
 
 TRIAGE_AGENT_PROMPT = """You are a triage agent that decides how to handle a SINGLE mentioned item.
 
-You receive ONE item at a time. Your job is to search for context and make a decision.
+You receive ONE item at a time with:
+- **text**: The item to triage
+- **context** (optional): What this item relates to (e.g., a recently mentioned task)
+
+Your job is to search for related todos/facts and make a decision.
 
 You have access to these tools:
 1. **search_todos** - Find existing todos that might be related to the current item
@@ -186,96 +201,84 @@ You have access to these tools:
 5. **TriageDecision** - Make your final decision about the item
 
 WORKFLOW:
-1. ALWAYS search_todos first to find potentially related todos
-2. ALWAYS search_facts before creating a new todo - look for relevant preferences, contacts, or context
-   - For hiring/finding people: search for preferred vendors, past contacts, recommendations
-   - For purchases: search for budget constraints, preferred suppliers, past decisions
-   - For any task: search for relevant preferences or context that should inform the todo
-3. Then EITHER:
-   a. Call TriageDecision (create/update/ignore) for task-related items
-   b. Call save_fact then do_nothing for non-task info worth remembering
-   c. Call do_nothing for pure greetings/thanks
+1. If context is provided, search_todos using the context first (it likely refers to an existing todo)
+2. Then search_todos using the item text to find other related todos
+3. search_facts for relevant preferences or context
+4. Make your decision
 
 DECISION LOGIC:
 
-**Key distinction: Is the item an ACTIONABLE TASK or just INFORMATION?**
+**When context is provided**, the item is likely adding details to an existing todo:
+- Search for the todo matching the context
+- If found, use action="update" to add the item text to that todo's description
+- Example: text="2 week sprint, discuss with sabesh", context="setting up a waitlist for felix"
+  → search for "waitlist felix" → update that todo's description with the new details
+
+**When NO context is provided**, decide based on the item text:
 
 ACTIONABLE TASK = something that needs to be DONE (verb-based: hire, buy, fix, call, send, etc.)
-INFORMATION = context, details, constraints about an existing task (budget, deadline, requirements)
+INFORMATION = context, details, constraints (budget, deadline, requirements)
 
 If item is an ACTIONABLE TASK:
-- ALWAYS use action="create" to create a new todo
-- If related to an existing todo, set parent_id to link them as a subtask
-- Example: "Hire a designer for the billboard" + existing "Buy billboards" todo
-  → create new task "Hire a designer" with parent_id = billboard todo's ID
+- Use action="create" to create a new todo
+- If related to an existing todo, set parent_id to link them
 
-If item is INFORMATION/CONTEXT about an existing todo:
+If item is INFORMATION about an existing todo:
 - Use action="update" to add the info to that todo's description
-- Example: "The billboard budget is $5000" + existing "Buy billboards" todo
-  → update todo description to include budget
 
 If there is NO related todo:
-- For actionable items → TriageDecision with action="create" (no parent_id)
+- For actionable items → TriageDecision with action="create"
 - For valuable context/info → save_fact, then do_nothing
 - For pure greetings/thanks → do_nothing only
 
 EXAMPLES:
-- "Hire a designer for the billboard" + existing "Buy billboards" todo
-  → search_todos → TriageDecision(action="create", new_task={title: "Hire a designer for billboard"}, parent_id="<billboard-todo-id>")
 
-- "The billboard budget is $5000" + existing "Buy billboards" todo
-  → search_todos → TriageDecision(action="update", todo_id="<id>", description="Budget: $5000")
+With context:
+- text="2 week sprint, discuss with sabesh", context="setting up a waitlist for felix"
+  → search_todos("waitlist felix") → find todo → TriageDecision(action="update", todo_id="<id>", description="<existing> + Timeline: 2 week sprint. Need to discuss with Sabesh.", tags=["waitlist", "felix", "sprint", "sabesh"])
 
-- "Before buying groceries, I need to check what's in the fridge" + existing "Buy groceries" todo
-  → search_todos → TriageDecision(action="create", new_task={title: "Check what's in the fridge"}, parent_id="<groceries-todo-id>")
+Without context:
+- text="Buy groceries"
+  → search_todos → TriageDecision(action="create", new_task={title: "Buy groceries"}, tags=["groceries", "shopping"])
 
-- "The billboard budget is $5000" + NO related todo
-  → search_todos → save_fact("Billboard budget is $5000", "context", ["budget", "billboard"])
-  → do_nothing("Saved as fact, no related todo")
-
-- "Buy groceries"
-  → search_todos → TriageDecision(action="create", new_task={title: "Buy groceries"})
+- text="Hire a designer for the billboard" + existing "Buy billboards" todo
+  → search_todos → TriageDecision(action="create", new_task={title: "Hire a designer for billboard"}, parent_id="<billboard-todo-id>", tags=["designer", "billboard", "hiring"])
 
 CRITICAL RULES:
+- When context is provided, prioritize finding and updating the related todo
 - ALWAYS search_todos before making any decision
-- ACTIONABLE TASKS always get action="create", even if related to existing todos (use parent_id to link)
-- Only use action="update" for adding INFORMATION to existing todos, not for new tasks
-- Only save_fact for info that's worth remembering but NOT task-related
-- Don't save_fact for pure greetings ("Thanks!", "Hello!")
+- Only use action="update" for adding INFORMATION to existing todos, not for new actionable tasks
 - Do NOT invent tasks beyond what was explicitly mentioned
+- TAGS ARE MANDATORY for every create/update action - always provide 2-5 searchable tags
 
 For TriageDecision "create" action:
-- new_task.title should be close to the original item text (don't embellish)
-- new_task.description: Include any relevant facts found (preferences, contacts, context)
-  - If you found a preferred vendor/contact, mention them in the description
-  - If you found relevant constraints or context, include them
-- parent_id: Set to the ID of a related existing todo if this task is a subtask/dependency
-- tags: 2-5 key searchable concepts
+- new_task.title: Close to the original item text
+- new_task.description: Include relevant facts found (preferences, contacts, context)
+- tags: REQUIRED - 2-5 key searchable concepts (e.g., ["standups", "meetings", "team"])
 
 For TriageDecision "update" action:
 - todo_id: The ID of the existing todo to update
-- Only update fields that need changing
 - description: Write the COMPLETE new description - preserve ALL existing info and add the new info
+- tags: REQUIRED - 2-5 key searchable concepts for this todo
 - NEVER remove existing information unless explicitly asked
-- If the new info is already in the todo, use do_nothing instead (no redundant updates)
 """
 
 MAX_TOOL_CALLS = 5
 
 
-def triage_agent(state: TriagePayload) -> dict:
-    """Triage a single mentioned item using tool-calling to search for existing todos."""
-    item: MentionedItem = state["item"]
+def triage_agent(state: dict) -> dict:
+    """Triage a single item using tool-calling to search for existing todos."""
+    item = TriagePayload.model_validate(state)
 
-    log.info(f"Triaging item: {item.text} (intent={item.intent})")
+    log.info(f"Triaging item: {item.text}")
     AgentLog.section(f"Triage: {item.text[:50]}{'...' if len(item.text) > 50 else ''}")
-    AgentLog.action(
-        "triage", "Processing item", f"Text: {item.text}\nIntent: {item.intent}"
-    )
+    context_info = f"Context: {item.context}" if item.context else "No context"
+    AgentLog.action("triage", "Processing item", f"Text: {item.text}\n{context_info}")
 
     # Build human message
-    item_json = item.model_dump_json(indent=2)
-    human_content = f"Item to triage:\n{item_json}"
+    human_content = f"Item to triage: {item.text}"
+    if item.context:
+        human_content += f"\n\nContext (what this item relates to): {item.context}"
 
     messages = [
         SystemMessage(content=TRIAGE_AGENT_PROMPT),

@@ -5,7 +5,7 @@ from pydantic import BaseModel, Field
 
 from ..config import get_llm
 from ..logging_config import AgentLog, get_logger
-from ..state import MentionedItem, PipelineState, TriagePayload
+from ..state import PipelineState, TriagePayload
 
 log = get_logger("document_processor_agent")
 
@@ -23,11 +23,21 @@ def do_nothing(reason: str) -> str:
     return f"Acknowledged: {reason}"
 
 
-class TriggerTriageInput(BaseModel):
+class TriageItem(BaseModel):
+    """A single item to triage."""
+
+    text: str = Field(description="The item text to triage")
+    context: str = Field(
+        default="",
+        description="Relevant background context from the document that relates to this item",
+    )
+
+
+class trigger_triage(BaseModel):
     """Input for triggering triage on mentioned items."""
 
-    items: list[MentionedItem] = Field(
-        description="List of actionable items mentioned by the user"
+    items: list[TriageItem] = Field(
+        description="List of items to triage"
     )
 
 
@@ -35,7 +45,7 @@ DOCUMENT_PROCESSOR_PROMPT = """You are a context processor that analyzes user in
 
 You will receive:
 1. TRIGGER TEXT - the user's recent input
-2. DOCUMENT CONTEXT (optional) - background information
+2. DOCUMENT CONTEXT (optional) - background information including recently mentioned items
 
 You have TWO tools available:
 
@@ -45,39 +55,33 @@ You have TWO tools available:
    - Incomplete fragments that don't convey information
    - Examples: "W", "asdf", "k", "hmm", "..."
 
-2. **trigger_triage** - Use ONLY for MEANINGFUL content:
+2. **trigger_triage** - Use for MEANINGFUL content:
    - Actionable items ("I need to buy groceries", "We need to buy billboards")
    - Status updates ("finished the report")
    - Information that might relate to tasks ("The billboard budget is $5000")
    - Facts about the user ("I'm a software engineer")
    - Context/background info ("Our brand color is blue")
 
-   The triage agent can search existing todos and decide whether to:
-   - Create a new todo
-   - Update an existing todo with this information
-   - Save it as a fact for future reference
-   - Ignore it
+CRITICAL - Recognizing Related Items:
+When the trigger text elaborates on something in the document context, extract it as ONE item with context:
 
-INTENT CLASSIFICATION for trigger_triage:
-- "create": User wants to add something new (e.g., "I need to buy groceries")
-- "update_status": User indicates progress or completion (e.g., "finished the report")
-- "add_detail": User provides more info about something (e.g., "the budget is $5000")
-- "general": Informational, context, or facts about the user
+Example:
+- Document context: "we should focus on setting up a waitlist for felix"
+- Trigger: "could be a 2 week sprint, need to discuss with sabesh"
+- CORRECT: One item: text="2 week sprint, discuss with sabesh", context="setting up a waitlist for felix"
+- WRONG: Two separate items without context
 
-STATUS HINTS (for update_status intent):
-- "completed": done, finished, completed, shipped, resolved, fixed
-- "in_progress": working on, started, began, interviewing, looking into
-- "pending": need to, should, want to, planning to
+The triage agent will use the context to decide whether to update an existing todo or create a new one.
 
 DECISION RULE:
-- If the trigger text is meaningful (conveys actual information) → trigger_triage
+- If the trigger text is meaningful → trigger_triage
 - If the trigger text is meaningless (greetings, gibberish, fragments) → do_nothing
 - A single character or very short unclear text is NEVER meaningful
 
 IMPORTANT:
 - Extract items ONLY from TRIGGER TEXT, not from document context
-- Do NOT invent or expand on what the user said
-- Each distinct item should be separate in trigger_triage"""
+- Include relevant context from the document when the trigger elaborates on something
+- Do NOT invent or expand on what the user said"""
 
 
 def document_processor_agent(state: PipelineState) -> Command:
@@ -90,6 +94,7 @@ def document_processor_agent(state: PipelineState) -> Command:
 
     if not trigger_text.strip():
         log.warning("Trigger text is empty")
+        AgentLog.error("doc_processor", "Trigger text is empty")
         return Command(goto="finalize", update={"errors": ["Trigger text is empty"]})
 
     # Get pre-extracted document context
@@ -103,7 +108,7 @@ def document_processor_agent(state: PipelineState) -> Command:
         human_content += f"\n\nDOCUMENT CONTEXT (background only, do not extract items):\n{doc_context}"
 
     # Bind tools to LLM
-    tools = [do_nothing, TriggerTriageInput]
+    tools = [do_nothing, trigger_triage]
     llm = get_llm().bind_tools(tools)
 
     messages: list = [
@@ -112,7 +117,7 @@ def document_processor_agent(state: PipelineState) -> Command:
     ]
 
     # Collect items for triage
-    triage_items: list[MentionedItem] = []
+    triage_items: list[TriagePayload] = []
 
     max_iterations = 5
     for iteration in range(max_iterations):
@@ -123,6 +128,7 @@ def document_processor_agent(state: PipelineState) -> Command:
             response = AIMessage(content=response.content, tool_calls=response.tool_calls)
         except Exception as e:
             log.error(f"LLM error: {e}")
+            AgentLog.error("doc_processor", f"LLM error: {e}")
             return Command(
                 goto=[Send("finalize", {"errors": [f"Document processor error: {str(e)}"]})]
             )
@@ -130,6 +136,7 @@ def document_processor_agent(state: PipelineState) -> Command:
         # Check if there are tool calls
         if not response.tool_calls:
             log.info("No tool calls, finishing")
+            AgentLog.action("doc_processor", "LLM returned no tool calls")
             break
 
         messages.append(response)
@@ -145,29 +152,25 @@ def document_processor_agent(state: PipelineState) -> Command:
             if tool_name == "do_nothing":
                 reason = tool_args.get("reason", "No reason provided")
                 log.info(f"do_nothing called: {reason}")
+                AgentLog.decision("doc_processor", "do_nothing", reason)
                 messages.append(
                     ToolMessage(content=f"Acknowledged: {reason}", tool_call_id=tool_id)
                 )
 
-            elif tool_name == "TriggerTriageInput":
+            elif tool_name == "trigger_triage":
                 items = tool_args.get("items", [])
                 log.info(f"trigger_triage called with {len(items)} items")
                 AgentLog.action("doc_processor", f"Extracted {len(items)} items for triage")
 
                 for item_data in items:
-                    item = MentionedItem(
+                    item = TriagePayload(
                         text=item_data.get("text", ""),
-                        intent=item_data.get("intent", "general"),
-                        status_hint=item_data.get("status_hint"),
-                        related_keywords=item_data.get("related_keywords", []),
-                        background_info=item_data.get("background_info"),
+                        context=item_data.get("context", ""),
                     )
                     triage_items.append(item)
-                    log.info(
-                        f"Triage item: text='{item.text}' intent={item.intent} "
-                        f"status_hint={item.status_hint} keywords={item.related_keywords}"
-                    )
-                    AgentLog.action("doc_processor", f"  - {item.text}", f"Intent: {item.intent}")
+                    log.info(f"Triage item: text='{item.text}' context='{item.context}'")
+                    context_str = f"Context: {item.context}" if item.context else "No context"
+                    AgentLog.action("doc_processor", f"  - {item.text}", context_str)
 
                 messages.append(
                     ToolMessage(
@@ -178,6 +181,7 @@ def document_processor_agent(state: PipelineState) -> Command:
 
             else:
                 log.warning(f"Unknown tool: {tool_name}")
+                AgentLog.error("doc_processor", f"Unknown tool called: {tool_name}")
                 messages.append(
                     ToolMessage(content=f"Unknown tool: {tool_name}", tool_call_id=tool_id)
                 )
@@ -192,13 +196,13 @@ def document_processor_agent(state: PipelineState) -> Command:
     # Route to triage or finalize
     if not triage_items:
         log.info("No actionable items, going to finalize")
+        AgentLog.action("doc_processor", "No actionable items extracted, skipping triage")
         return Command(goto=[Send("finalize", {})])
 
     # Fan out to triage agents
     triage_payloads = []
     for item in triage_items:
-        payload: TriagePayload = {"item": item}
-        triage_payloads.append(Send("triage_agent", payload))
+        triage_payloads.append(Send("triage_agent", item.model_dump()))
 
     log.info(f"Dispatching {len(triage_payloads)} triage payloads")
     return Command(goto=triage_payloads)

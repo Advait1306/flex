@@ -77,7 +77,7 @@ async def run_pipeline(
     AgentLog.section(f"Pipeline Start - Document: {doc_id}")
     AgentLog.action("pipeline", "Input received", f"Trigger: {trigger[:200]}{'...' if len(trigger) > 200 else ''}")
     if document_context:
-        AgentLog.action("pipeline", "Document context", f"{len(document_context)} chars")
+        AgentLog.action("pipeline", "Document context", document_context)
 
     initial_state: PipelineState = {
         "trigger": trigger,
@@ -91,6 +91,10 @@ async def run_pipeline(
 
     try:
         result = await pipeline_graph.ainvoke(initial_state)
+    except Exception as e:
+        log.error(f"Pipeline execution error: {e}")
+        AgentLog.error("pipeline", f"Pipeline execution error: {e}")
+        raise
     finally:
         # Always close the agent log
         AgentLog.close()
