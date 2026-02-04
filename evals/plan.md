@@ -12,7 +12,7 @@
 
 This document outlines the evaluation framework for testing the AI pipeline that extracts todos from text. The pipeline consists of two main components:
 
-1. **Context Collector** - Extracts actionable items from trigger text, with optional document context
+1. **Document Processor** - Extracts actionable items from trigger text, with optional document context
 2. **Triage Agent** - Decides whether to create, update, or ignore each item based on existing todos
 
 ## Test Scenario Structure
@@ -282,7 +282,7 @@ pipeline/                 # NEW - Pure pipeline package
 ├── state.py              # Data models
 ├── config.py             # LLM config
 └── nodes/
-    ├── context_collector.py
+    ├── document_processor.py
     └── triage_agent.py   # Returns decisions only, no storage
 
 backend/
@@ -326,7 +326,7 @@ result = await run_pipeline(trigger, document_content, existing_todos)
    - `backend/agents/state.py` → `pipeline/state.py`
    - `backend/agents/config.py` → `pipeline/config.py`
    - `backend/agents/logging_config.py` → `pipeline/logging_config.py`
-   - `backend/agents/nodes/context_collector.py` → `pipeline/nodes/context_collector.py`
+   - `backend/agents/nodes/document_processor.py` → `pipeline/nodes/document_processor.py`
    - `backend/agents/nodes/triage_agent.py` → `pipeline/nodes/triage_agent.py` (refactor)
 
 2. **Keep in `backend/`:**

@@ -8,10 +8,10 @@ from ..config import get_llm
 from ..logging_config import get_logger
 from ..state import MentionedItem, PipelineState, TriagePayload
 
-log = get_logger("context_collector")
+log = get_logger("document_processor")
 
 
-class ContextCollectorResult(BaseModel):
+class DocumentProcessorResult(BaseModel):
     """Result of extracting context from user input."""
 
     mentioned_items: list[MentionedItem] = Field(
@@ -20,7 +20,7 @@ class ContextCollectorResult(BaseModel):
     )
 
 
-CONTEXT_COLLECTOR_PROMPT = """You are a context extractor that identifies actionable items from the TRIGGER TEXT only.
+DOCUMENT_PROCESSOR_PROMPT = """You are a context extractor that identifies actionable items from the TRIGGER TEXT only.
 
 You will receive:
 1. TRIGGER TEXT - the user's recent input (extract items ONLY from this)
@@ -77,9 +77,9 @@ def extract_text_from_blocks(blocks: list[dict]) -> str:
     return "\n".join(text_parts)
 
 
-def context_collector(state: PipelineState) -> Command:
+def document_processor(state: PipelineState) -> Command:
     """Extract context and fan out to triage agents (LLM #1)."""
-    log.info(f"Collecting context for document: {state['document_id']}")
+    log.info(f"Processing document: {state['document_id']}")
 
     trigger_text = state["trigger"]
     log.debug(f"Trigger text length: {len(trigger_text)} chars")
@@ -98,16 +98,16 @@ def context_collector(state: PipelineState) -> Command:
     if doc_text:
         human_content += f"\n\nDOCUMENT CONTEXT (background only, do not extract items):\n{doc_text}"
 
-    llm = get_llm().with_structured_output(ContextCollectorResult, method="function_calling")
+    llm = get_llm().with_structured_output(DocumentProcessorResult, method="function_calling")
 
     messages = [
-        SystemMessage(content=CONTEXT_COLLECTOR_PROMPT),
+        SystemMessage(content=DOCUMENT_PROCESSOR_PROMPT),
         HumanMessage(content=human_content),
     ]
 
     try:
         log.info("Invoking LLM for context extraction")
-        result = cast(ContextCollectorResult, llm.invoke(messages))
+        result = cast(DocumentProcessorResult, llm.invoke(messages))
 
         log.info(f"Extracted {len(result.mentioned_items)} mentioned items")
 
@@ -126,5 +126,5 @@ def context_collector(state: PipelineState) -> Command:
         return Command(goto=triage_payloads)
 
     except Exception as e:
-        log.error(f"Context collector error: {e}")
-        return Command(goto=[Send("finalize", {"errors": [f"Context collector error: {str(e)}"]})])
+        log.error(f"Document processor error: {e}")
+        return Command(goto=[Send("finalize", {"errors": [f"Document processor error: {str(e)}"]})])

@@ -2,7 +2,7 @@ from langgraph.graph import END, START, StateGraph
 from langgraph.graph.state import CompiledStateGraph
 
 from .logging_config import get_logger, start_pipeline_log
-from .nodes.context_collector import context_collector
+from .nodes.document_processor import document_processor
 from .nodes.triage_agent import triage_agent
 from .state import PipelineState
 
@@ -33,15 +33,15 @@ def create_pipeline_graph() -> CompiledStateGraph:
     builder = StateGraph(PipelineState)
 
     # Add nodes
-    builder.add_node("context_collector", context_collector)
+    builder.add_node("document_processor", document_processor)
     builder.add_node("triage_agent", triage_agent)
     builder.add_node("finalize", finalize)
 
     # Add edges
-    # START -> context_collector (LLM #1: returns triage payloads directly)
-    builder.add_edge(START, "context_collector")
+    # START -> document_processor (LLM #1: returns triage payloads directly)
+    builder.add_edge(START, "document_processor")
 
-    # context_collector returns Send objects that route to triage_agent or finalize
+    # document_processor returns Send objects that route to triage_agent or finalize
     # triage_agent handles create/update directly, then goes to finalize
     builder.add_edge("triage_agent", "finalize")
 
