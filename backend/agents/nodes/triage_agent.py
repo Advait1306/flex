@@ -8,16 +8,21 @@ from langchain_core.tools import tool
 from pydantic import BaseModel, Field
 
 from ..config import get_llm
-from ..logging_config import get_logger
+from ..logging_config import AgentLog, get_logger
 from ..qdrant_store import (
     FactSearchResult,
     generate_id,
     load_todo,
     save_todo,
+)
+from ..qdrant_store import (
     save_fact as _save_fact,
+)
+from ..qdrant_store import (
     search_facts as _search_facts,
 )
-from ..search import SearchResult, search_todos as _search_todos
+from ..search import SearchResult
+from ..search import search_todos as _search_todos
 from ..state import FactItem, MentionedItem, NewTask, TodoItem, TriagePayload
 
 log = get_logger("triage_agent")
@@ -34,12 +39,16 @@ class TriageDecision(BaseModel):
         default=None,
         description="New task to create (only if action is 'create')",
     )
+    parent_id: str | None = Field(
+        default=None,
+        description="ID of existing todo to set as parent (only if action is 'create' and this task is related to an existing todo)",
+    )
     # For update action
     todo_id: str | None = Field(
         default=None,
         description="ID of existing todo to update (only if action is 'update')",
     )
-    status: Literal["pending", "in_progress", "completed"] | None = Field(
+    status: Literal["pending", "in_progress", "completed", "cancelled"] | None = Field(
         default=None,
         description="New status for the todo (only if action is 'update')",
     )
@@ -171,14 +180,17 @@ You receive ONE item at a time. Your job is to search for context and make a dec
 
 You have access to these tools:
 1. **search_todos** - Find existing todos that might be related to the current item
-2. **search_facts** - Find known facts/context about the user
+2. **search_facts** - Find known facts/context about the user (preferences, contacts, past decisions)
 3. **save_fact** - Save information worth remembering (NOT task-related)
 4. **do_nothing** - When no action is needed at all
 5. **TriageDecision** - Make your final decision about the item
 
 WORKFLOW:
 1. ALWAYS search_todos first to find potentially related todos
-2. Optionally search_facts for relevant context
+2. ALWAYS search_facts before creating a new todo - look for relevant preferences, contacts, or context
+   - For hiring/finding people: search for preferred vendors, past contacts, recommendations
+   - For purchases: search for budget constraints, preferred suppliers, past decisions
+   - For any task: search for relevant preferences or context that should inform the todo
 3. Then EITHER:
    a. Call TriageDecision (create/update/ignore) for task-related items
    b. Call save_fact then do_nothing for non-task info worth remembering
@@ -186,45 +198,58 @@ WORKFLOW:
 
 DECISION LOGIC:
 
-If there IS a related todo:
-- Use TriageDecision with action="update" to add info to that todo
-- Example: "Budget is $5000" + existing billboard todo → update todo description
+**Key distinction: Is the item an ACTIONABLE TASK or just INFORMATION?**
+
+ACTIONABLE TASK = something that needs to be DONE (verb-based: hire, buy, fix, call, send, etc.)
+INFORMATION = context, details, constraints about an existing task (budget, deadline, requirements)
+
+If item is an ACTIONABLE TASK:
+- ALWAYS use action="create" to create a new todo
+- If related to an existing todo, set parent_id to link them as a subtask
+- Example: "Hire a designer for the billboard" + existing "Buy billboards" todo
+  → create new task "Hire a designer" with parent_id = billboard todo's ID
+
+If item is INFORMATION/CONTEXT about an existing todo:
+- Use action="update" to add the info to that todo's description
+- Example: "The billboard budget is $5000" + existing "Buy billboards" todo
+  → update todo description to include budget
 
 If there is NO related todo:
-- For actionable items → TriageDecision with action="create"
+- For actionable items → TriageDecision with action="create" (no parent_id)
 - For valuable context/info → save_fact, then do_nothing
 - For pure greetings/thanks → do_nothing only
 
 EXAMPLES:
+- "Hire a designer for the billboard" + existing "Buy billboards" todo
+  → search_todos → TriageDecision(action="create", new_task={title: "Hire a designer for billboard"}, parent_id="<billboard-todo-id>")
+
 - "The billboard budget is $5000" + existing "Buy billboards" todo
-  → search_todos → TriageDecision(action="update", description="Budget: $5000")
+  → search_todos → TriageDecision(action="update", todo_id="<id>", description="Budget: $5000")
+
+- "Before buying groceries, I need to check what's in the fridge" + existing "Buy groceries" todo
+  → search_todos → TriageDecision(action="create", new_task={title: "Check what's in the fridge"}, parent_id="<groceries-todo-id>")
 
 - "The billboard budget is $5000" + NO related todo
   → search_todos → save_fact("Billboard budget is $5000", "context", ["budget", "billboard"])
   → do_nothing("Saved as fact, no related todo")
-
-- "Our company was founded in 2020"
-  → search_todos → save_fact("Company founded in 2020", "context", ["company", "history"])
-  → do_nothing("No related todo, saved as fact")
-
-- "I'm a software engineer"
-  → search_todos → save_fact("User is a software engineer", "personal", ["profession"])
-  → do_nothing("Personal info saved")
 
 - "Buy groceries"
   → search_todos → TriageDecision(action="create", new_task={title: "Buy groceries"})
 
 CRITICAL RULES:
 - ALWAYS search_todos before making any decision
-- Prefer "update" over "create" if there's a related existing todo
+- ACTIONABLE TASKS always get action="create", even if related to existing todos (use parent_id to link)
+- Only use action="update" for adding INFORMATION to existing todos, not for new tasks
 - Only save_fact for info that's worth remembering but NOT task-related
 - Don't save_fact for pure greetings ("Thanks!", "Hello!")
 - Do NOT invent tasks beyond what was explicitly mentioned
-- Do NOT break down items into sub-tasks
 
 For TriageDecision "create" action:
 - new_task.title should be close to the original item text (don't embellish)
-- new_task.description only if user provided details or relevant facts exist
+- new_task.description: Include any relevant facts found (preferences, contacts, context)
+  - If you found a preferred vendor/contact, mention them in the description
+  - If you found relevant constraints or context, include them
+- parent_id: Set to the ID of a related existing todo if this task is a subtask/dependency
 - tags: 2-5 key searchable concepts
 
 For TriageDecision "update" action:
@@ -243,6 +268,10 @@ def triage_agent(state: TriagePayload) -> dict:
     item: MentionedItem = state["item"]
 
     log.info(f"Triaging item: {item.text} (intent={item.intent})")
+    AgentLog.section(f"Triage: {item.text[:50]}{'...' if len(item.text) > 50 else ''}")
+    AgentLog.action(
+        "triage", "Processing item", f"Text: {item.text}\nIntent: {item.intent}"
+    )
 
     # Build human message
     item_json = item.model_dump_json(indent=2)
@@ -274,21 +303,33 @@ def triage_agent(state: TriagePayload) -> dict:
 
             if not response.tool_calls:
                 log.warning("LLM returned no tool calls, prompting for decision")
-                messages.append(HumanMessage(content="Please make your decision using TriageDecision or do_nothing."))
+                messages.append(
+                    HumanMessage(
+                        content="Please make your decision using TriageDecision or do_nothing."
+                    )
+                )
                 continue
 
             for tool_call in response.tool_calls:
                 log.info(f"Tool call: {tool_call['name']}({tool_call['args']})")
 
                 if tool_call["name"] == "search_todos":
+                    AgentLog.tool_call("search_todos", tool_call["args"])
                     result = search_todos.invoke(tool_call["args"])
                     # Count results for console, full results in file log
                     try:
-                        result_count = len(json.loads(result)) if result != "No matching todos found." else 0
+                        result_count = (
+                            len(json.loads(result))
+                            if result != "No matching todos found."
+                            else 0
+                        )
                     except json.JSONDecodeError:
                         result_count = 0
                     log.info(f"Todo search returned {result_count} results")
                     log.debug(f"Todo search results:\n{result}")
+                    AgentLog.tool_result(
+                        "search_todos", f"{result_count} todos found\n{result}"
+                    )
 
                     tool_message = ToolMessage(
                         content=result,
@@ -297,14 +338,22 @@ def triage_agent(state: TriagePayload) -> dict:
                     messages.append(tool_message)
 
                 elif tool_call["name"] == "search_facts":
+                    AgentLog.tool_call("search_facts", tool_call["args"])
                     result = search_facts.invoke(tool_call["args"])
                     # Count results for console, full results in file log
                     try:
-                        result_count = len(json.loads(result)) if result != "No matching facts found." else 0
+                        result_count = (
+                            len(json.loads(result))
+                            if result != "No matching facts found."
+                            else 0
+                        )
                     except json.JSONDecodeError:
                         result_count = 0
                     log.info(f"Fact search returned {result_count} results")
                     log.debug(f"Fact search results:\n{result}")
+                    AgentLog.tool_result(
+                        "search_facts", f"{result_count} facts found\n{result}"
+                    )
 
                     tool_message = ToolMessage(
                         content=result,
@@ -317,14 +366,22 @@ def triage_agent(state: TriagePayload) -> dict:
                     category = tool_call["args"].get("category", "other")
                     tags = tool_call["args"].get("tags", [])
 
-                    log.info(f"save_fact called: {fact_text[:50]}... category={category}")
+                    log.info(
+                        f"save_fact called: {fact_text[:50]}... category={category}"
+                    )
+                    AgentLog.tool_call(
+                        "save_fact",
+                        {"fact": fact_text, "category": category, "tags": tags},
+                    )
 
                     # Queue fact for saving (we'll save after loop completes)
-                    facts_to_save.append({
-                        "fact": fact_text,
-                        "category": category,
-                        "tags": tags,
-                    })
+                    facts_to_save.append(
+                        {
+                            "fact": fact_text,
+                            "category": category,
+                            "tags": tags,
+                        }
+                    )
 
                     tool_message = ToolMessage(
                         content=f"Fact queued for saving: {fact_text}",
@@ -335,6 +392,7 @@ def triage_agent(state: TriagePayload) -> dict:
                 elif tool_call["name"] == "do_nothing":
                     reason = tool_call["args"].get("reason", "No reason provided")
                     log.info(f"do_nothing called: {reason}")
+                    AgentLog.decision("triage", "do_nothing", reason)
 
                     tool_message = ToolMessage(
                         content=f"Acknowledged: {reason}",
@@ -347,6 +405,7 @@ def triage_agent(state: TriagePayload) -> dict:
                 elif tool_call["name"] == "TriageDecision":
                     # LLM returned its decision
                     decision = TriageDecision.model_validate(tool_call["args"])
+                    AgentLog.decision("triage", decision.action, decision.reason)
                     done = True
                     break
 
@@ -382,7 +441,9 @@ def triage_agent(state: TriagePayload) -> dict:
         log.info(f"Triage decision: {decision.action} - {decision.reason}")
 
         if decision.action == "create" and decision.new_task:
-            return _create_todo(decision.new_task, tags=decision.tags)
+            return _create_todo(
+                decision.new_task, tags=decision.tags, parent_id=decision.parent_id
+            )
 
         elif decision.action == "update" and decision.todo_id:
             return _update_todo(
@@ -406,11 +467,14 @@ def triage_agent(state: TriagePayload) -> dict:
         }
 
 
-def _create_todo(task: NewTask, tags: list[str] | None = None) -> dict:
+def _create_todo(
+    task: NewTask, tags: list[str] | None = None, parent_id: str | None = None
+) -> dict:
     """Create a new todo from the task."""
-    log.info(f"=== CREATING TODO ===")
+    log.info("=== CREATING TODO ===")
     log.info(f"  Title: {task.title}")
     log.info(f"  Description: {task.description}")
+    log.info(f"  Parent ID: {parent_id}")
     log.info(f"  Tags: {tags}")
 
     try:
@@ -419,16 +483,25 @@ def _create_todo(task: NewTask, tags: list[str] | None = None) -> dict:
             id=todo_id,
             title=task.title,
             description=task.description,
+            parent_id=parent_id,
             status="pending",
         )
         save_todo(todo, tags=tags)
 
         log.info(f"  Created todo ID: {todo_id}")
-        log.info(f"=== TODO CREATED ===")
+        log.info("=== TODO CREATED ===")
+
+        details = f"ID: {todo_id}\nTitle: {task.title}"
+        if task.description:
+            details += f"\nDescription: {task.description}"
+        if parent_id:
+            details += f"\nParent ID: {parent_id}"
+        AgentLog.result("triage", f"Created todo:\n{details}")
 
         return {"created_todos": [todo], "updated_todos": [], "errors": []}
     except Exception as e:
         log.error(f"Failed to create todo '{task.title}': {e}")
+        AgentLog.error("triage", f"Failed to create todo: {e}")
         return {
             "created_todos": [],
             "updated_todos": [],
@@ -440,11 +513,11 @@ def _update_todo(
     todo_id: str,
     title: str | None = None,
     description: str | None = None,
-    status: Literal["pending", "in_progress", "completed"] | None = None,
+    status: Literal["pending", "in_progress", "completed", "cancelled"] | None = None,
     tags: list[str] | None = None,
 ) -> dict:
     """Update an existing todo."""
-    log.info(f"=== UPDATING TODO ===")
+    log.info("=== UPDATING TODO ===")
     log.info(f"  Todo ID: {todo_id}")
 
     try:
@@ -469,7 +542,9 @@ def _update_todo(
             updated_data["title"] = title
 
         if description is not None:
-            log.info(f"  Updating description: {existing_todo.description} -> {description}")
+            log.info(
+                f"  Updating description: {existing_todo.description} -> {description}"
+            )
             updated_data["description"] = description
 
         if status is not None:
@@ -482,11 +557,28 @@ def _update_todo(
         updated_todo = TodoItem.model_validate(updated_data)
         saved_todo = save_todo(updated_todo, tags=tags)
 
-        log.info(f"=== TODO UPDATED ===")
+        log.info("=== TODO UPDATED ===")
+
+        changes = []
+        if title is not None:
+            changes.append(f"Title: {title}")
+        if description is not None:
+            changes.append(
+                f"Description: {description[:100]}{'...' if len(description) > 100 else ''}"
+            )
+        if status is not None:
+            changes.append(f"Status: {status}")
+        AgentLog.result(
+            "triage",
+            f"Updated todo {todo_id}:\n" + "\n".join(changes)
+            if changes
+            else "No changes",
+        )
 
         return {"created_todos": [], "updated_todos": [saved_todo], "errors": []}
     except Exception as e:
         log.error(f"Failed to update todo {todo_id}: {e}")
+        AgentLog.error("triage", f"Failed to update todo {todo_id}: {e}")
         return {
             "created_todos": [],
             "updated_todos": [],

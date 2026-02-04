@@ -6,6 +6,7 @@ from pydantic import BaseModel
 
 from agents import run_pipeline
 from agents.logging_config import get_logger
+from agents.qdrant_store import list_facts
 from agents.state import TodoItem
 from agents.storage import delete_todo, generate_id, list_todos, load_todo, save_todo
 
@@ -165,3 +166,11 @@ async def delete_todo_endpoint(todo_id: str):
 
     log.warning(f"Todo not found for deletion: {todo_id}")
     raise HTTPException(status_code=404, detail="Todo not found")
+
+
+@router.get("/facts")
+async def get_facts():
+    """Get all facts."""
+    log.debug("Listing all facts")
+    facts = list_facts()
+    return {"facts": [f.model_dump(exclude_none=True) for f in facts]}

@@ -1,7 +1,7 @@
 from langgraph.graph import END, START, StateGraph
 from langgraph.graph.state import CompiledStateGraph
 
-from .logging_config import get_logger, start_pipeline_log
+from .logging_config import AgentLog, get_logger
 from .nodes.document_processor_agent import document_processor_agent
 from .nodes.triage_agent import triage_agent
 from .state import PipelineState
@@ -19,9 +19,13 @@ def finalize(state: PipelineState) -> dict:
         f"Pipeline complete: {created} created, {updated} updated, {len(errors)} errors"
     )
 
+    AgentLog.section("Pipeline Complete")
+    AgentLog.result("pipeline", f"Created: {created}, Updated: {updated}, Errors: {len(errors)}")
+
     if errors:
         for error in errors:
             log.error(f"Pipeline error: {error}")
+            AgentLog.error("pipeline", error)
 
     return {"status": "completed"}
 
@@ -62,13 +66,18 @@ async def run_pipeline(
     """Run the pipeline on a trigger with optional document context."""
     import uuid
 
-    # Start a new log file for this pipeline run
-    log_file = start_pipeline_log()
+    # Start the agent log
+    agent_log_file = AgentLog.start()
 
     # Auto-generate document_id for tracking if not provided
     doc_id = document_id or f"cli-{uuid.uuid4().hex[:8]}"
     log.info(f"Starting pipeline for document: {doc_id}")
-    log.info(f"Log file: {log_file}")
+    log.info(f"Agent log: {agent_log_file}")
+
+    AgentLog.section(f"Pipeline Start - Document: {doc_id}")
+    AgentLog.action("pipeline", "Input received", f"Trigger: {trigger[:200]}{'...' if len(trigger) > 200 else ''}")
+    if document_context:
+        AgentLog.action("pipeline", "Document context", f"{len(document_context)} chars")
 
     initial_state: PipelineState = {
         "trigger": trigger,
@@ -80,7 +89,11 @@ async def run_pipeline(
         "status": "pending",
     }
 
-    result = await pipeline_graph.ainvoke(initial_state)
+    try:
+        result = await pipeline_graph.ainvoke(initial_state)
+    finally:
+        # Always close the agent log
+        AgentLog.close()
 
     log.info(f"Pipeline finished for document: {doc_id}")
 

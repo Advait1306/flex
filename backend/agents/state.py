@@ -15,7 +15,9 @@ class MentionedItem(BaseModel):
     intent: Literal["create", "update_status", "add_detail", "general"]
     status_hint: Literal["pending", "in_progress", "completed"] | None = None
     related_keywords: list[str] = []
-    background_info: str | None = None  # Relevant context from document for this specific item
+    background_info: str | None = (
+        None  # Relevant context from document for this specific item
+    )
 
 
 class FactItem(BaseModel):
@@ -35,8 +37,10 @@ class TodoItem(BaseModel):
     id: str
     title: str
     description: str | None = None
-    parent_id: str | None = Field(default=None, description="ID of parent todo if this is a subtask")
-    status: Literal["pending", "in_progress", "completed"] = "pending"
+    parent_id: str | None = Field(
+        default=None, description="ID of parent todo if this is a subtask"
+    )
+    status: Literal["pending", "in_progress", "completed", "cancelled"] = "pending"
 
 
 class NewTask(BaseModel):
@@ -59,7 +63,9 @@ NewTask.model_rebuild()
 class TodoUpdate(BaseModel):
     """An update to an existing todo."""
 
-    todo_id: str = Field(description="The ID of the todo to update (can be a parent or subtask)")
+    todo_id: str = Field(
+        description="The ID of the todo to update (can be a parent or subtask)"
+    )
     title: str | None = Field(default=None, description="New title for the todo")
     description: str | None = Field(default=None, description="New description")
     status: Literal["pending", "in_progress", "completed"] | None = Field(
@@ -77,7 +83,9 @@ class PipelineState(TypedDict):
     created_todos: Annotated[list[TodoItem], add]
     updated_todos: Annotated[list[TodoItem], add]
     errors: Annotated[list[str], add]
-    status: Literal["pending", "scanning", "routing", "processing", "completed", "failed"]
+    status: Literal[
+        "pending", "scanning", "routing", "processing", "completed", "failed"
+    ]
 
 
 class TriagePayload(TypedDict):

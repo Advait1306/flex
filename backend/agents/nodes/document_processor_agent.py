@@ -4,7 +4,7 @@ from langgraph.types import Command, Send
 from pydantic import BaseModel, Field
 
 from ..config import get_llm
-from ..logging_config import get_logger
+from ..logging_config import AgentLog, get_logger
 from ..state import MentionedItem, PipelineState, TriagePayload
 
 log = get_logger("document_processor_agent")
@@ -83,6 +83,7 @@ IMPORTANT:
 def document_processor_agent(state: PipelineState) -> Command:
     """Extract context and identify items for triage using tool-based approach."""
     log.info(f"Processing document: {state['document_id']}")
+    AgentLog.section("Document Processor")
 
     trigger_text = state["trigger"]
     log.debug(f"Trigger text length: {len(trigger_text)} chars")
@@ -151,6 +152,7 @@ def document_processor_agent(state: PipelineState) -> Command:
             elif tool_name == "TriggerTriageInput":
                 items = tool_args.get("items", [])
                 log.info(f"trigger_triage called with {len(items)} items")
+                AgentLog.action("doc_processor", f"Extracted {len(items)} items for triage")
 
                 for item_data in items:
                     item = MentionedItem(
@@ -165,6 +167,7 @@ def document_processor_agent(state: PipelineState) -> Command:
                         f"Triage item: text='{item.text}' intent={item.intent} "
                         f"status_hint={item.status_hint} keywords={item.related_keywords}"
                     )
+                    AgentLog.action("doc_processor", f"  - {item.text}", f"Intent: {item.intent}")
 
                 messages.append(
                     ToolMessage(

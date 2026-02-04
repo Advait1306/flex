@@ -5,6 +5,9 @@ import useSWR from "swr";
 import { api, fetcher } from "@/lib/axios";
 import { BlockEditor, BlockEditorHandle } from "./BlockEditor";
 import { VoiceInputButton } from "./VoiceInputButton";
+import { TodoList } from "@/components/todos/TodoList";
+import { FactsList } from "@/components/facts/FactsList";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Block } from "@blocknote/core";
 
 interface Document {
@@ -123,8 +126,9 @@ export function DocumentFeed() {
   }
 
   return (
-    <div className="min-h-screen bg-background">
-      <div className="mx-auto max-w-4xl py-8 border-l border-r border-border min-h-screen">
+    <div className="min-h-screen bg-background flex">
+      {/* Document Editor - Left Side */}
+      <div className="flex-1 min-w-0 py-8 border-r border-border min-h-screen">
         {documents.map((doc, index) => (
           <div key={doc.id} className="relative">
             <BlockEditor
@@ -139,6 +143,24 @@ export function DocumentFeed() {
             )}
           </div>
         ))}
+      </div>
+
+      {/* Sidebar - Right Side */}
+      <div className="min-w-[500px] w-[500px] shrink-0 border-l border-border bg-muted/30 h-screen sticky top-0 flex flex-col">
+        <Tabs defaultValue="todos" className="flex flex-col h-full">
+          <div className="p-6 pb-0">
+            <TabsList>
+              <TabsTrigger value="todos">Todos</TabsTrigger>
+              <TabsTrigger value="facts">Facts</TabsTrigger>
+            </TabsList>
+          </div>
+          <TabsContent value="todos" className="flex-1 overflow-y-auto p-6 pt-4 mt-0">
+            <TodoList />
+          </TabsContent>
+          <TabsContent value="facts" className="flex-1 overflow-y-auto p-6 pt-4 mt-0">
+            <FactsList />
+          </TabsContent>
+        </Tabs>
       </div>
 
       <VoiceInputButton onTranscript={handleTranscript} />
