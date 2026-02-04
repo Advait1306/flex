@@ -43,21 +43,47 @@ class TodoUpdateRequest(BaseModel):
     status: str | None = None
 
 
+def extract_text_from_blocks(blocks: list) -> str:
+    """Extract all text content from BlockNote blocks."""
+    texts = []
+    for block in blocks:
+        if isinstance(block, dict) and "content" in block:
+            content = block["content"]
+            if isinstance(content, list):
+                for item in content:
+                    if isinstance(item, dict) and "text" in item:
+                        texts.append(item["text"])
+        if isinstance(block, dict) and "children" in block:
+            texts.append(extract_text_from_blocks(block["children"]))
+    return "".join(texts)
+
+
+def truncate_to_last_n_words(text: str, max_words: int = 10000) -> str:
+    """Truncate text to the last N words."""
+    words = text.split()
+    if len(words) <= max_words:
+        return text
+    return " ".join(words[-max_words:])
+
+
 @router.post("/pipeline/run")
 async def run_pipeline_endpoint(request: PipelineRequest):
     """Run the agent pipeline on a trigger with optional document context."""
     log.info(f"Pipeline run requested with trigger: {request.trigger[:50]}...")
 
-    # Load document content if document_id provided
-    document_content = None
+    # Load and process document content if document_id provided
+    document_context = ""
     if request.document_id:
         data = load_documents()
         document_content = data["documents"].get(request.document_id)
         if document_content is None:
             log.warning(f"Document not found: {request.document_id}")
             raise HTTPException(status_code=404, detail="Document not found")
+        # Extract text and truncate to last 10k words
+        full_text = extract_text_from_blocks(document_content)
+        document_context = truncate_to_last_n_words(full_text, max_words=10000)
 
-    result = await run_pipeline(request.trigger, document_content, request.document_id)
+    result = await run_pipeline(request.trigger, document_context, request.document_id)
 
     log.info(f"Pipeline completed: {len(result.get('created_todos', []))} created, {len(result.get('updated_todos', []))} updated")
 

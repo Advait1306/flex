@@ -2,7 +2,7 @@ from langgraph.graph import END, START, StateGraph
 from langgraph.graph.state import CompiledStateGraph
 
 from .logging_config import get_logger, start_pipeline_log
-from .nodes.document_processor import document_processor
+from .nodes.document_processor_agent import document_processor_agent
 from .nodes.triage_agent import triage_agent
 from .state import PipelineState
 
@@ -33,16 +33,16 @@ def create_pipeline_graph() -> CompiledStateGraph:
     builder = StateGraph(PipelineState)
 
     # Add nodes
-    builder.add_node("document_processor", document_processor)
+    builder.add_node("document_processor_agent", document_processor_agent)
     builder.add_node("triage_agent", triage_agent)
     builder.add_node("finalize", finalize)
 
     # Add edges
-    # START -> document_processor (LLM #1: returns triage payloads directly)
-    builder.add_edge(START, "document_processor")
+    # START -> document_processor_agent
+    builder.add_edge(START, "document_processor_agent")
 
-    # document_processor returns Send objects that route to triage_agent or finalize
-    # triage_agent handles create/update directly, then goes to finalize
+    # document_processor_agent uses Command with Send to fan out to triage_agent or finalize
+    # triage_agent -> finalize
     builder.add_edge("triage_agent", "finalize")
 
     # finalize -> END
@@ -57,7 +57,7 @@ pipeline_graph = create_pipeline_graph()
 
 
 async def run_pipeline(
-    trigger: str, document_content: list[dict] | None = None, document_id: str | None = None
+    trigger: str, document_context: str = "", document_id: str | None = None
 ) -> dict:
     """Run the pipeline on a trigger with optional document context."""
     import uuid
@@ -73,7 +73,7 @@ async def run_pipeline(
     initial_state: PipelineState = {
         "trigger": trigger,
         "document_id": doc_id,
-        "document_content": document_content or [],
+        "document_context": document_context,
         "created_todos": [],
         "updated_todos": [],
         "errors": [],

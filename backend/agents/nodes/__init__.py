@@ -1,4 +1,4 @@
-from .document_processor import document_processor
+from .document_processor_agent import document_processor_agent
 from .triage_agent import triage_agent
 
-__all__ = ["document_processor", "triage_agent"]
+__all__ = ["document_processor_agent", "triage_agent"]

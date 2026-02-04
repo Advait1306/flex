@@ -7,7 +7,13 @@ from pydantic import BaseModel, Field
 
 from ..config import get_llm
 from ..logging_config import get_logger
-from ..qdrant_store import generate_id, load_todo, save_todo
+from ..qdrant_store import (
+    FactSearchResult,
+    generate_id,
+    load_todo,
+    save_todo,
+    search_facts as _search_facts,
+)
 from ..search import SearchResult, search_todos as _search_todos
 from ..state import MentionedItem, NewTask, TodoItem, TriagePayload
 
@@ -86,45 +92,90 @@ def search_todos(query: str) -> str:
     return json.dumps(todos_data, indent=2)
 
 
-TRIAGE_AGENT_PROMPT = """You are a triage agent that decides how to handle a single mentioned item.
+@tool
+def search_facts(query: str) -> str:
+    """Search for known facts about the user by semantic similarity and keyword matching.
 
-You have access to a search_todos tool to find existing todos. Use it to search for related todos before making a decision.
+    Use this to find relevant context about the user that might inform your decision.
+    Facts include user preferences, personal info, work context, etc.
 
-Your job is to decide ONE action:
-- "create": Create a new task (only if this is genuinely new work not covered by existing todos)
-- "update": Update an existing todo (PREFERRED - match by topic/keywords, not exact title)
+    Args:
+        query: Search terms to find matching facts (e.g., "preferences", "work", "programming")
+
+    Returns:
+        JSON list of matching facts with their categories and relevance scores
+    """
+    results: list[FactSearchResult] = _search_facts(query, limit=5)
+
+    if not results:
+        return "No matching facts found."
+
+    facts_data = []
+    for result in results:
+        f = result.fact
+        fact_info: dict = {
+            "fact": f.fact,
+            "category": f.category,
+            "relevance_score": round(result.score, 3),
+        }
+        if f.tags:
+            fact_info["tags"] = f.tags
+        facts_data.append(fact_info)
+
+    return json.dumps(facts_data, indent=2)
+
+
+TRIAGE_AGENT_PROMPT = """You are a triage agent that decides how to handle a SINGLE mentioned item.
+
+You receive ONE item at a time. Your job is to make ONE decision for that ONE item.
+
+You have access to TWO search tools:
+1. **search_todos** - Find existing todos that might be related to the current item
+2. **search_facts** - Find known facts/context (preferences, guidelines, ideas, resources, etc.)
+
+Your job is to decide ONE action for the given item:
+- "create": Create ONE new task (only if this is genuinely new work not covered by existing todos)
+- "update": Update ONE existing todo (PREFERRED - match by topic/keywords, not exact title)
 - "ignore": No action needed (general info, already handled, or not actionable)
 
+CRITICAL - DO NOT INVENT:
+- You are handling EXACTLY ONE item that was given to you
+- Create AT MOST ONE todo for that item
+- The todo title should closely match what the user said
+- Do NOT break down the item into sub-tasks
+- Do NOT invent related tasks
+- Do NOT expand on what the user said
+- If user says "buy billboards in BLR", create ONE todo: "Buy billboards in BLR" - nothing more
+
 WORKFLOW:
-1. First, use search_todos to find potentially related todos. Try different search terms based on the item's content.
-2. Review the search results to see if any existing todo matches.
-3. Make your decision based on what you found.
+1. Use search_todos to find potentially related todos
+2. Optionally use search_facts to find relevant context
+3. Make your decision for this ONE item
+
+USING FACTS TO ENRICH TASKS:
+If relevant facts exist, you may add them to the description:
+- "Note: brand guidelines specify blue as the primary color"
+- "Context: the team prefers morning meetings"
+But ONLY if genuinely relevant - don't force connections.
 
 IMPORTANT:
-- ALWAYS search before deciding - don't assume there are no existing todos
-- ALWAYS prefer "update" over "create" if there's ANY related existing todo
-- Match existing todos by topic/keywords, not exact title match
-- Use the item's intent and status_hint to guide your decision
-- If intent is "update_status", you MUST find a matching todo to update (or ignore if no match)
-- If intent is "create", still search to check if an existing todo covers this topic
-- NEVER invent or make up descriptions - only include a description if the user explicitly provided details
+- ALWAYS search todos before deciding
+- ALWAYS prefer "update" over "create" if there's a related existing todo
+- If intent is "update_status", find a matching todo to update (or ignore if no match)
+- NEVER create multiple todos - you handle ONE item, you create AT MOST ONE todo
+- NEVER invent tasks beyond what was explicitly mentioned
 
-For "update" action, provide:
+For "create" action:
+- new_task.title should be close to the original item text (don't embellish)
+- new_task.description only if user provided details or relevant facts exist
+- Do NOT add subtasks
+- tags: 2-5 key searchable concepts
+
+For "update" action:
 - todo_id: The ID of the existing todo to update
-- status: New status if changing (pending/in_progress/completed)
-- title: New title only if it should change
-- description: ONLY if the user explicitly provided new details (never invent)
-- tags: 2-5 key searchable tags/topics (technologies, features, actions mentioned)
+- Only update fields that need changing
 
-For "create" action, provide:
-- new_task with title only (no description unless the user explicitly provided details)
-- tags: 2-5 key searchable tags/topics (technologies, features, actions mentioned)
-
-Tags help with future searches. Extract key concepts like:
-- Technologies: "JWT", "React", "PostgreSQL"
-- Features: "authentication", "login flow", "user profile"
-- Actions: "bug fix", "refactor", "performance optimization"
-- Domains: "security", "frontend", "database"
+Tags examples: "billboard", "marketing", "BLR", "advertising"
 """
 
 MAX_TOOL_CALLS = 5
@@ -147,7 +198,7 @@ def triage_agent(state: TriagePayload) -> dict:
 
     # Get LLM with both tools and structured output bound
     llm = get_llm()
-    tools = [search_todos, TriageDecision]
+    tools = [search_todos, search_facts, TriageDecision]
     llm_with_tools = llm.bind_tools(tools)
 
     try:
@@ -175,8 +226,24 @@ def triage_agent(state: TriagePayload) -> dict:
                         result_count = len(json.loads(result)) if result != "No matching todos found." else 0
                     except json.JSONDecodeError:
                         result_count = 0
-                    log.info(f"Search returned {result_count} results")
-                    log.debug(f"Search results:\n{result}")
+                    log.info(f"Todo search returned {result_count} results")
+                    log.debug(f"Todo search results:\n{result}")
+
+                    tool_message = ToolMessage(
+                        content=result,
+                        tool_call_id=tool_call["id"],
+                    )
+                    messages.append(tool_message)
+
+                elif tool_call["name"] == "search_facts":
+                    result = search_facts.invoke(tool_call["args"])
+                    # Count results for console, full results in file log
+                    try:
+                        result_count = len(json.loads(result)) if result != "No matching facts found." else 0
+                    except json.JSONDecodeError:
+                        result_count = 0
+                    log.info(f"Fact search returned {result_count} results")
+                    log.debug(f"Fact search results:\n{result}")
 
                     tool_message = ToolMessage(
                         content=result,
@@ -229,41 +296,25 @@ def triage_agent(state: TriagePayload) -> dict:
 
 def _create_todo(task: NewTask, tags: list[str] | None = None) -> dict:
     """Create a new todo from the task."""
-    log.info(f"Creating todo: {task.title}")
+    log.info(f"=== CREATING TODO ===")
+    log.info(f"  Title: {task.title}")
+    log.info(f"  Description: {task.description}")
+    log.info(f"  Tags: {tags}")
 
     try:
-        created_todos: list[TodoItem] = []
-
-        # Create the parent todo
-        parent_id = generate_id()
-        parent_todo = TodoItem(
-            id=parent_id,
+        todo_id = generate_id()
+        todo = TodoItem(
+            id=todo_id,
             title=task.title,
             description=task.description,
             status="pending",
         )
-        save_todo(parent_todo, tags=tags)
-        created_todos.append(parent_todo)
-        log.info(f"Created todo: {parent_id} - {task.title}")
+        save_todo(todo, tags=tags)
 
-        # Create subtasks as separate todos with parent_id
-        if task.subtasks:
-            for subtask in task.subtasks:
-                subtask_todo = TodoItem(
-                    id=generate_id(),
-                    title=subtask.title,
-                    description=subtask.description,
-                    parent_id=parent_id,
-                    status="pending",
-                )
-                # Subtasks inherit parent tags if none specified
-                save_todo(subtask_todo, tags=tags)
-                created_todos.append(subtask_todo)
-                log.info(
-                    f"Created subtask: {subtask_todo.id} - {subtask.title} (parent: {parent_id})"
-                )
+        log.info(f"  Created todo ID: {todo_id}")
+        log.info(f"=== TODO CREATED ===")
 
-        return {"created_todos": created_todos, "updated_todos": [], "errors": []}
+        return {"created_todos": [todo], "updated_todos": [], "errors": []}
     except Exception as e:
         log.error(f"Failed to create todo '{task.title}': {e}")
         return {
@@ -281,38 +332,45 @@ def _update_todo(
     tags: list[str] | None = None,
 ) -> dict:
     """Update an existing todo."""
-    log.info(f"Updating todo: {todo_id}")
+    log.info(f"=== UPDATING TODO ===")
+    log.info(f"  Todo ID: {todo_id}")
 
     try:
         existing_todo = load_todo(todo_id)
 
         if not existing_todo:
-            log.warning(f"Todo not found: {todo_id}")
+            log.warning(f"  Todo not found: {todo_id}")
             return {
                 "created_todos": [],
                 "updated_todos": [],
                 "errors": [f"Todo {todo_id} not found"],
             }
 
+        log.info(f"  Existing title: {existing_todo.title}")
+        log.info(f"  Existing status: {existing_todo.status}")
+
         # Build updated fields
         updated_data = existing_todo.model_dump()
 
         if title is not None:
-            log.info(f"  title: {existing_todo.title} -> {title}")
+            log.info(f"  Updating title: {existing_todo.title} -> {title}")
             updated_data["title"] = title
 
         if description is not None:
-            log.info(f"  description: {existing_todo.description} -> {description}")
+            log.info(f"  Updating description: {existing_todo.description} -> {description}")
             updated_data["description"] = description
 
         if status is not None:
-            log.info(f"  status: {existing_todo.status} -> {status}")
+            log.info(f"  Updating status: {existing_todo.status} -> {status}")
             updated_data["status"] = status
+
+        if tags:
+            log.info(f"  Tags: {tags}")
 
         updated_todo = TodoItem.model_validate(updated_data)
         saved_todo = save_todo(updated_todo, tags=tags)
 
-        log.info(f"Updated todo: {todo_id} - new status: {saved_todo.status}")
+        log.info(f"=== TODO UPDATED ===")
 
         return {"created_todos": [], "updated_todos": [saved_todo], "errors": []}
     except Exception as e:

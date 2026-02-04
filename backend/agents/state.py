@@ -18,6 +18,17 @@ class MentionedItem(BaseModel):
     background_info: str | None = None  # Relevant context from document for this specific item
 
 
+class FactItem(BaseModel):
+    """A fact about the user stored in the knowledge base."""
+
+    id: str
+    fact: str
+    category: Literal["preference", "personal", "work", "context", "other"] = "other"
+    tags: list[str] = []  # Tags for multi-vector embeddings
+    source_trigger: str | None = None
+    created_at: str | None = None
+
+
 class TodoItem(BaseModel):
     """A todo task item."""
 
@@ -62,7 +73,7 @@ class PipelineState(TypedDict):
 
     trigger: str  # Text content to analyze for tasks (primary input)
     document_id: str  # Internal tracking ID
-    document_content: list[dict]  # Context document (can be empty)
+    document_context: str  # Pre-extracted and truncated document text for context
     created_todos: Annotated[list[TodoItem], add]
     updated_todos: Annotated[list[TodoItem], add]
     errors: Annotated[list[str], add]

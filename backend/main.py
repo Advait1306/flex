@@ -1,11 +1,13 @@
+import json
+import uuid
+from pathlib import Path
+from typing import Any, List
+
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
-from typing import List, Any
-from pathlib import Path
-import uuid
-import json
 
+from agents.queue_manager import get_queue_manager
 from routers import pipeline_router
 
 app = FastAPI()
@@ -59,6 +61,14 @@ def extract_text_from_blocks(blocks: List[Any]) -> str:
     return "".join(texts)
 
 
+def truncate_to_last_n_words(text: str, max_words: int = 10000) -> str:
+    """Truncate text to the last N words."""
+    words = text.split()
+    if len(words) <= max_words:
+        return text
+    return " ".join(words[-max_words:])
+
+
 @app.get("/")
 def read_root():
     return {"message": "Hello from FastAPI"}
@@ -93,8 +103,8 @@ def create_document():
 
 
 @app.put("/api/documents/{doc_id}")
-def save_document(doc_id: str, body: DocumentContent):
-    """Save document content"""
+async def save_document(doc_id: str, body: DocumentContent):
+    """Save document content and trigger pipeline on new content."""
     data = load_data()
 
     # Get old content and extract text
@@ -104,20 +114,44 @@ def save_document(doc_id: str, body: DocumentContent):
     # Extract text from new content
     new_text = extract_text_from_blocks(body.content)
 
-    # Find and print only the new text
+    # Find the new/changed text and queue pipeline trigger
+    trigger_text = None
     if new_text.startswith(old_text):
         diff = new_text[len(old_text):]
-        if diff:
-            print(f"[NEW] {diff}")
+        if diff.strip():
+            trigger_text = diff.strip()
+            print(f"[NEW] {trigger_text}")
     elif new_text != old_text:
-        # Content changed in a non-append way
-        print(f"[CHANGED] {new_text}")
+        # Content changed in a non-append way - use full new text as trigger
+        trigger_text = new_text.strip()
+        print(f"[CHANGED] {trigger_text}")
 
+    # Save document first
     data["documents"][doc_id] = body.content
     if doc_id not in data["order"]:
         data["order"].append(doc_id)
     save_data(data)
-    return {"status": "saved"}
+
+    # Queue pipeline trigger if there's new content
+    if trigger_text:
+        # Extract and truncate document context for the pipeline
+        full_doc_text = extract_text_from_blocks(body.content)
+        doc_context = truncate_to_last_n_words(full_doc_text, max_words=10000)
+
+        queue_manager = get_queue_manager()
+        await queue_manager.enqueue(
+            trigger=trigger_text,
+            document_id=doc_id,
+            document_context=doc_context,
+        )
+        status = queue_manager.get_status()
+        return {
+            "status": "saved",
+            "pipeline_queued": True,
+            "queue_size": status["queue_size"],
+        }
+
+    return {"status": "saved", "pipeline_queued": False}
 
 
 @app.delete("/api/documents/{doc_id}")
@@ -129,3 +163,20 @@ def delete_document(doc_id: str):
         data["order"].remove(doc_id)
     save_data(data)
     return {"status": "deleted"}
+
+
+@app.get("/api/pipeline/status")
+def get_pipeline_status():
+    """Get the current pipeline queue status."""
+    queue_manager = get_queue_manager()
+    return queue_manager.get_status()
+
+
+@app.get("/api/pipeline/result/{doc_id}")
+def get_pipeline_result(doc_id: str):
+    """Get the last pipeline result for a document."""
+    queue_manager = get_queue_manager()
+    result = queue_manager.get_last_result(doc_id)
+    if result is None:
+        return {"status": "no_result", "document_id": doc_id}
+    return {"status": "ok", "document_id": doc_id, "result": result}
