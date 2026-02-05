@@ -13,6 +13,8 @@ class TodoItem(BaseModel):
         default=None, description="ID of parent todo if this is a subtask"
     )
     status: Literal["pending", "in_progress", "completed", "cancelled"] = "pending"
+    created_at: str | None = None
+    updated_at: str | None = None
 
 
 class FactItem(BaseModel):

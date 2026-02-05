@@ -10,6 +10,8 @@ interface Todo {
   description?: string;
   parent_id?: string;
   status: "pending" | "in_progress" | "completed";
+  created_at?: string;
+  updated_at?: string;
 }
 
 const getStatusColor = (status: Todo["status"]) => {
@@ -141,8 +143,10 @@ export function TodoList() {
     {} as Record<string, Todo[]>
   );
 
-  // Root todos are those without a parent
-  const rootTodos = todos.filter((t) => !t.parent_id);
+  // Root todos are those without a parent, sorted by most recently updated
+  const rootTodos = todos
+    .filter((t) => !t.parent_id)
+    .sort((a, b) => (b.updated_at || "").localeCompare(a.updated_at || ""));
 
   if (isLoading) {
     return (

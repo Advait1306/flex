@@ -1,5 +1,6 @@
 import uuid
 from dataclasses import dataclass
+from datetime import datetime, timezone
 
 from qdrant_client.models import (
     Distance,
@@ -70,6 +71,18 @@ def ensure_collection() -> None:
         log.debug(f"Collection {COLLECTION_NAME} already exists")
 
 
+def _todo_from_payload(todo_id: str, payload: dict) -> TodoItem:
+    return TodoItem(
+        id=todo_id,
+        title=payload.get("title", ""),
+        description=payload.get("description"),
+        parent_id=payload.get("parent_id"),
+        status=payload.get("status", "pending"),
+        created_at=payload.get("created_at"),
+        updated_at=payload.get("updated_at"),
+    )
+
+
 def _save(todo: TodoItem, tags: list[str] | None = None) -> TodoItem:
     """Persist a TodoItem to Qdrant with multivector embeddings."""
     client = get_client()
@@ -95,6 +108,10 @@ def _save(todo: TodoItem, tags: list[str] | None = None) -> TodoItem:
         payload["parent_id"] = todo.parent_id
     if tags:
         payload["tags"] = tags
+    if todo.created_at:
+        payload["created_at"] = todo.created_at
+    if todo.updated_at:
+        payload["updated_at"] = todo.updated_at
 
     point = PointStruct(
         id=todo.id,
@@ -115,12 +132,15 @@ def create_todo(
     tags: list[str] | None = None,
 ) -> TodoItem:
     """Create a new todo and save it to the store."""
+    now = datetime.now(timezone.utc).isoformat()
     todo = TodoItem(
         id=str(uuid.uuid4()),
         title=title,
         description=description,
         parent_id=parent_id,
         status="pending",
+        created_at=now,
+        updated_at=now,
     )
     _save(todo, tags=tags)
     log.info(f"Created todo: {todo.id} - {title}")
@@ -146,6 +166,7 @@ def update_todo(
         data["description"] = description
     if status is not None:
         data["status"] = status
+    data["updated_at"] = datetime.now(timezone.utc).isoformat()
 
     updated = TodoItem.model_validate(data)
     _save(updated, tags=tags)
@@ -166,13 +187,7 @@ def load_todo(todo_id: str) -> TodoItem | None:
 
     point = points[0]
     payload = point.payload or {}
-    return TodoItem(
-        id=str(point.id),
-        title=payload.get("title", ""),
-        description=payload.get("description"),
-        parent_id=payload.get("parent_id"),
-        status=payload.get("status", "pending"),
-    )
+    return _todo_from_payload(str(point.id), payload)
 
 
 def list_todos() -> list[TodoItem]:
@@ -184,13 +199,7 @@ def list_todos() -> list[TodoItem]:
     todos = []
     for point in results:
         payload = point.payload or {}
-        todo = TodoItem(
-            id=str(point.id),
-            title=payload.get("title", ""),
-            description=payload.get("description"),
-            parent_id=payload.get("parent_id"),
-            status=payload.get("status", "pending"),
-        )
+        todo = _todo_from_payload(str(point.id), payload)
         todos.append(todo)
 
     log.info(f"Listed {len(todos)} todos")
@@ -238,13 +247,7 @@ def search_todos(query: str, limit: int = 10) -> list[SearchResult]:
 
     for point in vector_results.points:
         payload = point.payload or {}
-        todo = TodoItem(
-            id=str(point.id),
-            title=payload.get("title", ""),
-            description=payload.get("description"),
-            parent_id=payload.get("parent_id"),
-            status=payload.get("status", "pending"),
-        )
+        todo = _todo_from_payload(str(point.id), payload)
         results_by_id[todo.id] = SearchResult(todo=todo, score=point.score or 0.0)
 
     log.info(f"Vector search found {len(vector_results.points)} todos")
@@ -265,13 +268,7 @@ def search_todos(query: str, limit: int = 10) -> list[SearchResult]:
         todo_id = str(point.id)
         if todo_id not in results_by_id:
             payload = point.payload or {}
-            todo = TodoItem(
-                id=todo_id,
-                title=payload.get("title", ""),
-                description=payload.get("description"),
-                parent_id=payload.get("parent_id"),
-                status=payload.get("status", "pending"),
-            )
+            todo = _todo_from_payload(todo_id, payload)
             results_by_id[todo_id] = SearchResult(todo=todo, score=0.5)
 
     log.info(f"Keyword search found {len(keyword_results)} todos")
