@@ -22,5 +22,11 @@ class FactItem(BaseModel):
     fact: str
     category: Literal["preference", "personal", "work", "context", "other"] = "other"
     tags: list[str] = []
-    source_trigger: str | None = None
     created_at: str | None = None
+
+
+class TriagePayload(BaseModel):
+    """Payload sent to triage agent for a single item."""
+
+    text: str
+    context: str = ""

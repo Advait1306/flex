@@ -2,7 +2,7 @@ import os
 
 from langchain_openai import OpenAIEmbeddings
 
-from pipeline.logging_config import get_logger
+from ai.logging_config import get_logger
 
 log = get_logger("storage.embeddings")
 

@@ -1,7 +1,7 @@
 import json
 from pathlib import Path
 
-from pipeline.logging_config import get_logger
+from ai.logging_config import get_logger
 
 log = get_logger("store.freewrite")
 

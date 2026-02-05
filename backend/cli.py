@@ -6,14 +6,14 @@ import argparse
 import json
 import logging
 
-from pipeline import run_pipeline
+from ai import run_freewrite_processor_agent
 from store import list_todos, delete_todo
-from pipeline.logging_config import setup_logging, get_logger
+from ai.logging_config import setup_logging, get_logger
 
 log = get_logger("cli")
 
 
-async def run_on_text(text: str, use_context: bool = False) -> dict:
+async def run_on_text(text: str, use_context: bool = False) -> None:
     """Run pipeline on text trigger with optional freewrite context."""
     from store import load_freewrite
 
@@ -27,8 +27,9 @@ async def run_on_text(text: str, use_context: bool = False) -> dict:
 
     log.info(f"Running pipeline on trigger ({len(text)} chars)")
 
-    result = await run_pipeline(text, document_content or "", "freewrite")
-    return result
+    await run_freewrite_processor_agent(
+        trigger=text, document_context=document_content or "", document_id="freewrite"
+    )
 
 
 def main():
@@ -55,11 +56,7 @@ def main():
 
     if args.command == "run_pipeline":
         log.info("Starting pipeline")
-        result = asyncio.run(run_on_text(args.text, args.context))
-        print("\n" + "=" * 50)
-        print("RESULT:")
-        print("=" * 50)
-        print(json.dumps(result, indent=2))
+        asyncio.run(run_on_text(args.text, args.context))
 
     elif args.command == "list_todos":
         todos = list_todos()

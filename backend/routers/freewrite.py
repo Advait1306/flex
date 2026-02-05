@@ -5,8 +5,8 @@ from typing import Any, List
 from fastapi import APIRouter
 from pydantic import BaseModel
 
-from pipeline.logging_config import get_logger
-from pipeline.queue_manager import get_queue_manager
+from ai.logging_config import get_logger
+from ai.queue_manager import get_queue_manager
 
 log = get_logger("api.freewrite")
 

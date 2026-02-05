@@ -1,8 +1,7 @@
 import asyncio
 from dataclasses import dataclass
-from typing import Any
 
-from .graph import run_pipeline
+from .agents.freewrite_processor_agent import run_freewrite_processor_agent
 from .logging_config import get_logger
 
 log = get_logger("queue_manager")
@@ -24,7 +23,6 @@ class PipelineQueueManager:
         self._queue: asyncio.Queue[PipelineTrigger] = asyncio.Queue()
         self._is_processing = False
         self._current_task: asyncio.Task | None = None
-        self._results: dict[str, dict[str, Any]] = {}  # document_id -> last result
 
     async def enqueue(
         self,
@@ -57,20 +55,14 @@ class PipelineQueueManager:
                 log.info(f"Processing trigger for document {item.document_id}")
 
                 try:
-                    result = await run_pipeline(
+                    await run_freewrite_processor_agent(
                         trigger=item.trigger,
                         document_context=item.document_context,
                         document_id=item.document_id,
                     )
-                    self._results[item.document_id] = result
-                    log.info(
-                        f"Pipeline complete for {item.document_id}: "
-                        f"{len(result.get('created_todos', []))} created, "
-                        f"{len(result.get('updated_todos', []))} updated"
-                    )
+                    log.info(f"Pipeline complete for {item.document_id}")
                 except Exception as e:
                     log.error(f"Pipeline error for {item.document_id}: {e}")
-                    self._results[item.document_id] = {"error": str(e)}
                 finally:
                     self._queue.task_done()
 
@@ -84,10 +76,6 @@ class PipelineQueueManager:
             "queue_size": self._queue.qsize(),
             "is_processing": self._is_processing,
         }
-
-    def get_last_result(self, document_id: str) -> dict[str, Any] | None:
-        """Get the last pipeline result for a document."""
-        return self._results.get(document_id)
 
 
 # Global singleton

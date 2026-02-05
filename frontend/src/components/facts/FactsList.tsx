@@ -9,7 +9,6 @@ interface Fact {
   fact: string;
   category: "preference" | "personal" | "work" | "context" | "other";
   tags?: string[];
-  source_trigger?: string;
   created_at?: string;
 }
 

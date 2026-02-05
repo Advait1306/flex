@@ -1,12 +1,11 @@
 from .todos import (
     ensure_collection as ensure_todos_collection,
-    generate_id,
-    save_todo,
+    create_todo,
+    update_todo,
     load_todo,
     list_todos,
     delete_todo,
     search_todos,
-    find_todo_by_title,
     SearchResult,
 )
 from .facts import (
@@ -25,13 +24,12 @@ def init():
     ensure_facts_collection()
 
 __all__ = [
-    "generate_id",
-    "save_todo",
+    "create_todo",
+    "update_todo",
     "load_todo",
     "list_todos",
     "delete_todo",
     "search_todos",
-    "find_todo_by_title",
     "SearchResult",
     "save_fact",
     "search_facts",

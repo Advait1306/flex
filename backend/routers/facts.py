@@ -1,6 +1,6 @@
 from fastapi import APIRouter
 
-from pipeline.logging_config import get_logger
+from ai.logging_config import get_logger
 from store import list_facts
 
 log = get_logger("api.facts")

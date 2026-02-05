@@ -15,7 +15,7 @@ from qdrant_client.models import (
     VectorParams,
 )
 
-from pipeline.logging_config import get_logger
+from ai.logging_config import get_logger
 from models import TodoItem
 
 from .embeddings import get_embedding, get_embeddings
@@ -70,16 +70,9 @@ def ensure_collection() -> None:
         log.debug(f"Collection {COLLECTION_NAME} already exists")
 
 
-def generate_id() -> str:
-    """Generate a unique ID for a todo."""
-    return str(uuid.uuid4())
-
-
-def save_todo(todo: TodoItem, tags: list[str] | None = None) -> TodoItem:
-    """Save todo with variable-length multivector based on tags."""
+def _save(todo: TodoItem, tags: list[str] | None = None) -> TodoItem:
+    """Persist a TodoItem to Qdrant with multivector embeddings."""
     client = get_client()
-
-    log.info(f"Saving todo: {todo.id} - {todo.title}")
 
     if tags:
         texts_to_embed = tags
@@ -113,6 +106,51 @@ def save_todo(todo: TodoItem, tags: list[str] | None = None) -> TodoItem:
     log.debug(f"Todo {todo.id} saved to Qdrant")
 
     return todo
+
+
+def create_todo(
+    title: str,
+    description: str | None = None,
+    parent_id: str | None = None,
+    tags: list[str] | None = None,
+) -> TodoItem:
+    """Create a new todo and save it to the store."""
+    todo = TodoItem(
+        id=str(uuid.uuid4()),
+        title=title,
+        description=description,
+        parent_id=parent_id,
+        status="pending",
+    )
+    _save(todo, tags=tags)
+    log.info(f"Created todo: {todo.id} - {title}")
+    return todo
+
+
+def update_todo(
+    todo_id: str,
+    title: str | None = None,
+    description: str | None = None,
+    status: str | None = None,
+    tags: list[str] | None = None,
+) -> TodoItem:
+    """Update an existing todo. Raises ValueError if not found."""
+    existing = load_todo(todo_id)
+    if not existing:
+        raise ValueError(f"Todo not found: {todo_id}")
+
+    data = existing.model_dump()
+    if title is not None:
+        data["title"] = title
+    if description is not None:
+        data["description"] = description
+    if status is not None:
+        data["status"] = status
+
+    updated = TodoItem.model_validate(data)
+    _save(updated, tags=tags)
+    log.info(f"Updated todo: {todo_id}")
+    return updated
 
 
 def load_todo(todo_id: str) -> TodoItem | None:

@@ -14,7 +14,7 @@ from qdrant_client.models import (
     VectorParams,
 )
 
-from pipeline.logging_config import get_logger
+from ai.logging_config import get_logger
 from models import FactItem
 
 from .embeddings import get_embedding, get_embeddings
@@ -85,8 +85,6 @@ def save_fact(fact: FactItem, tags: list[str] | None = None) -> FactItem:
 
     if fact.tags:
         payload["tags"] = fact.tags
-    if fact.source_trigger:
-        payload["source_trigger"] = fact.source_trigger
     if fact.created_at:
         payload["created_at"] = fact.created_at
 
@@ -133,7 +131,6 @@ def search_facts(query: str, limit: int = 10) -> list[FactSearchResult]:
             fact=payload.get("fact", ""),
             category=payload.get("category", "other"),
             tags=payload.get("tags", []),
-            source_trigger=payload.get("source_trigger"),
             created_at=payload.get("created_at"),
         )
         results_by_id[fact.id] = FactSearchResult(fact=fact, score=point.score or 0.0)
@@ -160,7 +157,6 @@ def search_facts(query: str, limit: int = 10) -> list[FactSearchResult]:
                 fact=payload.get("fact", ""),
                 category=payload.get("category", "other"),
                 tags=payload.get("tags", []),
-                source_trigger=payload.get("source_trigger"),
                 created_at=payload.get("created_at"),
             )
             results_by_id[fact_id] = FactSearchResult(fact=fact, score=0.5)
@@ -189,7 +185,6 @@ def list_facts() -> list[FactItem]:
             fact=payload.get("fact", ""),
             category=payload.get("category", "other"),
             tags=payload.get("tags", []),
-            source_trigger=payload.get("source_trigger"),
             created_at=payload.get("created_at"),
         )
         facts.append(fact)
