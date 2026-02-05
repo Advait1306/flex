@@ -124,7 +124,6 @@ export function useRealtimeTranscription(
       // 3. Handle incoming messages
       ws.onmessage = (event) => {
         const msg = JSON.parse(event.data);
-        console.log("[ws event]", msg.type, msg);
 
         switch (msg.type) {
           case "input_audio_buffer.speech_started":
