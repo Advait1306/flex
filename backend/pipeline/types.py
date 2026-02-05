@@ -2,6 +2,8 @@ from typing import Annotated, Literal, TypedDict
 
 from pydantic import BaseModel, Field
 
+from models import TodoItem
+
 
 def add(a: list, b: list) -> list:
     """Reducer that combines lists from parallel branches."""
@@ -11,31 +13,8 @@ def add(a: list, b: list) -> list:
 class TriagePayload(BaseModel):
     """Payload sent to triage agent for a single item."""
 
-    text: str  # What was mentioned
-    context: str = ""  # Background from document context
-
-
-class FactItem(BaseModel):
-    """A fact about the user stored in the knowledge base."""
-
-    id: str
-    fact: str
-    category: Literal["preference", "personal", "work", "context", "other"] = "other"
-    tags: list[str] = []  # Tags for multi-vector embeddings
-    source_trigger: str | None = None
-    created_at: str | None = None
-
-
-class TodoItem(BaseModel):
-    """A todo task item."""
-
-    id: str
-    title: str
-    description: str | None = None
-    parent_id: str | None = Field(
-        default=None, description="ID of parent todo if this is a subtask"
-    )
-    status: Literal["pending", "in_progress", "completed", "cancelled"] = "pending"
+    text: str
+    context: str = ""
 
 
 class NewTask(BaseModel):
@@ -69,17 +48,16 @@ class TodoUpdate(BaseModel):
     )
 
 
+# TypedDict is required by LangGraph's StateGraph to support Annotated reducers
+# (e.g. merging lists from parallel fan-out branches). BaseModel won't work here.
 class PipelineState(TypedDict):
-    """Main pipeline state."""
 
-    trigger: str  # Text content to analyze for tasks (primary input)
-    document_id: str  # Internal tracking ID
-    document_context: str  # Pre-extracted and truncated document text for context
+    trigger: str
+    document_id: str
+    document_context: str
     created_todos: Annotated[list[TodoItem], add]
     updated_todos: Annotated[list[TodoItem], add]
     errors: Annotated[list[str], add]
     status: Literal[
         "pending", "scanning", "routing", "processing", "completed", "failed"
     ]
-
-

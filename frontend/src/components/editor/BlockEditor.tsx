@@ -20,14 +20,13 @@ export interface BlockEditorHandle {
 }
 
 interface BlockEditorProps {
-  docId: string;
   initialContent?: Block[];
-  onChange?: (docId: string, content: Block[]) => void;
+  onChange?: (content: Block[]) => void;
   onFocus?: () => void;
 }
 
 export const BlockEditor = forwardRef<BlockEditorHandle, BlockEditorProps>(
-  function BlockEditor({ docId, initialContent, onChange, onFocus }, ref) {
+  function BlockEditor({ initialContent, onChange, onFocus }, ref) {
     const saveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
     const lastContentRef = useRef<string>("");
 
@@ -44,8 +43,8 @@ export const BlockEditor = forwardRef<BlockEditorHandle, BlockEditorProps>(
         saveTimeoutRef.current = null;
       }
       const content = editor.document;
-      onChange?.(docId, content);
-    }, [editor, docId, onChange]);
+      onChange?.(content);
+    }, [editor, onChange]);
 
     useImperativeHandle(
       ref,

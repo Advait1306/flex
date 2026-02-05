@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useRef, useEffect, createRef } from "react";
+import { useCallback, useRef } from "react";
 import useSWR from "swr";
 import { api, fetcher } from "@/lib/axios";
 import { BlockEditor, BlockEditorHandle } from "./BlockEditor";
@@ -10,104 +10,37 @@ import { FactsList } from "@/components/facts/FactsList";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Block } from "@blocknote/core";
 
-interface Document {
-  id: string;
-  content: Block[];
-}
-
 export function DocumentFeed() {
-  const initializedRef = useRef(false);
-  const editorRefs = useRef<Map<string, React.RefObject<BlockEditorHandle | null>>>(
-    new Map()
-  );
-  const focusedEditorIdRef = useRef<string | null>(null);
+  const editorRef = useRef<BlockEditorHandle | null>(null);
 
-  const { data, error, isLoading, mutate } = useSWR<{ documents: Document[] }>(
-    "/api/documents",
+  const { data, error, isLoading, mutate } = useSWR<{ content: Block[] }>(
+    "/api/freewrite",
     fetcher
   );
 
-  const documents = data?.documents || [];
+  const content = data?.content || [];
 
-  const getEditorRef = useCallback((docId: string) => {
-    if (!editorRefs.current.has(docId)) {
-      editorRefs.current.set(docId, createRef<BlockEditorHandle>());
-    }
-    return editorRefs.current.get(docId)!;
-  }, []);
-
-  const createDocument = useCallback(async () => {
+  const saveContent = useCallback(async (content: Block[]) => {
     try {
-      const res = await api.post("/api/documents");
-      const newDoc: Document = { id: res.data.id, content: [] };
-      mutate(
-        (current) => ({
-          documents: [...(current?.documents || []), newDoc],
-        }),
-        false
-      );
-      return newDoc;
+      await api.put("/api/freewrite", { content });
     } catch (error) {
-      console.error("Failed to create document:", error);
-      return null;
-    }
-  }, [mutate]);
-
-  const saveDocument = useCallback(async (docId: string, content: Block[]) => {
-    try {
-      await api.put(`/api/documents/${docId}`, { content });
-    } catch (error) {
-      console.error("Failed to save document:", error);
+      console.error("Failed to save freewrite:", error);
     }
   }, []);
 
-  useEffect(() => {
-    if (initializedRef.current || isLoading) return;
-
-    if (documents.length === 0) {
-      initializedRef.current = true;
-      createDocument();
-    }
-  }, [isLoading, documents.length, createDocument]);
-
-  const handleDocumentChange = useCallback(
-    (docId: string, content: Block[]) => {
-      saveDocument(docId, content);
-      mutate(
-        (current) => ({
-          documents:
-            current?.documents.map((doc) =>
-              doc.id === docId ? { ...doc, content } : doc
-            ) || [],
-        }),
-        false
-      );
+  const handleChange = useCallback(
+    (content: Block[]) => {
+      saveContent(content);
+      mutate({ content }, false);
     },
-    [saveDocument, mutate]
+    [saveContent, mutate]
   );
 
-  const handleEditorFocus = useCallback((docId: string) => {
-    focusedEditorIdRef.current = docId;
-  }, []);
-
   const handleTranscript = useCallback((text: string) => {
-    const focusedId = focusedEditorIdRef.current;
-    if (focusedId) {
-      const ref = editorRefs.current.get(focusedId);
-      if (ref?.current) {
-        ref.current.insertText(text);
-        return;
-      }
+    if (editorRef.current) {
+      editorRef.current.insertText(text);
     }
-
-    if (documents.length > 0) {
-      const firstDocId = documents[0].id;
-      const ref = editorRefs.current.get(firstDocId);
-      if (ref?.current) {
-        ref.current.insertText(text);
-      }
-    }
-  }, [documents]);
+  }, []);
 
   if (isLoading) {
     return (
@@ -120,29 +53,20 @@ export function DocumentFeed() {
   if (error) {
     return (
       <div className="flex min-h-screen items-center justify-center">
-        <div className="text-destructive">Failed to load documents</div>
+        <div className="text-destructive">Failed to load freewrite</div>
       </div>
     );
   }
 
   return (
     <div className="min-h-screen bg-background flex">
-      {/* Document Editor - Left Side */}
+      {/* Editor - Left Side */}
       <div className="flex-1 min-w-0 py-8 border-r border-border min-h-screen">
-        {documents.map((doc, index) => (
-          <div key={doc.id} className="relative">
-            <BlockEditor
-              ref={getEditorRef(doc.id)}
-              docId={doc.id}
-              initialContent={doc.content}
-              onChange={handleDocumentChange}
-              onFocus={() => handleEditorFocus(doc.id)}
-            />
-            {index < documents.length - 1 && (
-              <div className="my-4 border-t border-border/40" />
-            )}
-          </div>
-        ))}
+        <BlockEditor
+          ref={editorRef}
+          initialContent={content}
+          onChange={handleChange}
+        />
       </div>
 
       {/* Sidebar - Right Side */}

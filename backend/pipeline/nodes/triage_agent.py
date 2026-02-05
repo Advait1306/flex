@@ -9,21 +9,17 @@ from pydantic import BaseModel, Field, field_validator
 
 from ..config import get_llm
 from ..logging_config import AgentLog, get_logger
-from ..qdrant_store import (
+from models import FactItem, TodoItem
+from ..types import NewTask, TriagePayload
+from store import (
     FactSearchResult,
+    SearchResult,
     generate_id,
     load_todo,
     save_todo,
+    search_todos as _search_todos,
 )
-from ..qdrant_store import (
-    save_fact as _save_fact,
-)
-from ..qdrant_store import (
-    search_facts as _search_facts,
-)
-from ..search import SearchResult
-from ..search import search_todos as _search_todos
-from ..state import FactItem, NewTask, TodoItem, TriagePayload
+from store.facts import save_fact as _save_fact, search_facts as _search_facts
 
 log = get_logger("triage_agent")
 

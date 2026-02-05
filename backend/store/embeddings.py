@@ -2,12 +2,15 @@ import os
 
 from langchain_openai import OpenAIEmbeddings
 
-from .config import get_embedding_model
-from .logging_config import get_logger
+from pipeline.logging_config import get_logger
 
-log = get_logger("embeddings")
+log = get_logger("storage.embeddings")
 
 _embeddings: OpenAIEmbeddings | None = None
+
+
+def get_embedding_model() -> str:
+    return os.getenv("EMBEDDING_MODEL", "openai/text-embedding-3-small")
 
 
 def get_embeddings_client() -> OpenAIEmbeddings:

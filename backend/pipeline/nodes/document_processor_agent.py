@@ -5,7 +5,7 @@ from pydantic import BaseModel, Field
 
 from ..config import get_llm
 from ..logging_config import AgentLog, get_logger
-from ..state import PipelineState, TriagePayload
+from ..types import PipelineState, TriagePayload
 
 log = get_logger("document_processor_agent")
 

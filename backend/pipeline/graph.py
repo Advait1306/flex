@@ -1,10 +1,13 @@
+from backend.pipeline.types import PipelineState
+
+
 from langgraph.graph import END, START, StateGraph
 from langgraph.graph.state import CompiledStateGraph
 
 from .logging_config import AgentLog, get_logger
 from .nodes.document_processor_agent import document_processor_agent
 from .nodes.triage_agent import triage_agent
-from .state import PipelineState
+from .types import PipelineState
 
 log = get_logger("graph")
 
