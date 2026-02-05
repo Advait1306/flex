@@ -3,7 +3,7 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from routers import facts_router, freewrite_router, todos_router
+from routers import facts_router, freewrite_router, todos_router, transcription_router
 import store
 
 @asynccontextmanager
@@ -17,6 +17,7 @@ app = FastAPI(lifespan=lifespan)
 app.include_router(freewrite_router)
 app.include_router(todos_router)
 app.include_router(facts_router)
+app.include_router(transcription_router)
 
 app.add_middleware(
     CORSMiddleware,

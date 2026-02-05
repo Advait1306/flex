@@ -61,12 +61,13 @@ export function DocumentFeed() {
   return (
     <div className="min-h-screen bg-background flex">
       {/* Editor - Left Side */}
-      <div className="flex-1 min-w-0 py-8 border-r border-border min-h-screen">
+      <div className="relative flex-1 min-w-0 py-8 border-r border-border min-h-screen">
         <BlockEditor
           ref={editorRef}
           initialContent={content}
           onChange={handleChange}
         />
+        <VoiceInputButton onTranscript={handleTranscript} />
       </div>
 
       {/* Sidebar - Right Side */}
@@ -86,8 +87,6 @@ export function DocumentFeed() {
           </TabsContent>
         </Tabs>
       </div>
-
-      <VoiceInputButton onTranscript={handleTranscript} />
     </div>
   );
 }

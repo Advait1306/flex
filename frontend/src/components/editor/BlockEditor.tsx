@@ -50,9 +50,14 @@ export const BlockEditor = forwardRef<BlockEditorHandle, BlockEditorProps>(
       ref,
       () => ({
         insertText: (text: string) => {
-          editor.focus();
-          editor.insertInlineContent([{ type: "text", text: text + " " }]);
-          console.log("[SAVE] audio");
+          const blocks = editor.document;
+          const lastBlock = blocks[blocks.length - 1];
+          const existingContent = Array.isArray(lastBlock.content)
+            ? lastBlock.content
+            : [];
+          editor.updateBlock(lastBlock, {
+            content: [...existingContent, { type: "text", text: text + " " }],
+          });
           save();
         },
         focus: () => {
