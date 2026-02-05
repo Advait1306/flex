@@ -1,0 +1,47 @@
+groups:
+  - name: full_collection
+    fixtures: full
+    scenarios:
+      - id: exact_keyword_match
+        type: todos
+        query: "groceries"
+        expect:
+          top_result: "t1"
+          should_include: ["t1"]
+
+      - id: semantic_auth
+        type: todos
+        query: "login issues"
+        expect:
+          should_include: ["t2"]
+
+      - id: semantic_billboard
+        type: todos
+        query: "outdoor advertising Bangalore"
+        expect:
+          should_include: ["t4"]
+
+      - id: unrelated_query
+        type: todos
+        query: "quantum physics research"
+        expect:
+          should_exclude: ["t1", "t2", "t3"]
+
+      - id: fact_programming
+        type: facts
+        query: "programming language"
+        expect:
+          top_result: "f1"
+          should_include: ["f1"]
+
+      - id: fact_team_member
+        type: facts
+        query: "who does frontend"
+        expect:
+          should_include: ["f3"]
+
+      - id: fact_company
+        type: facts
+        query: "where does the user work"
+        expect:
+          should_include: ["f2"]

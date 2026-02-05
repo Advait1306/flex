@@ -1,0 +1,77 @@
+groups:
+  - name: default
+    scenarios:
+      - id: simple_action
+        trigger: "I need to buy groceries"
+        document_context: ""
+        expect:
+          action: triage
+          min_items: 1
+          items_contain: ["groceries"]
+
+      - id: multiple_items
+        trigger: "buy groceries and call the dentist"
+        document_context: ""
+        expect:
+          action: triage
+          min_items: 2
+          items_contain: ["groceries", "dentist"]
+
+      - id: meaningless_ok
+        trigger: "ok"
+        document_context: ""
+        expect:
+          action: do_nothing
+
+      - id: meaningless_greeting
+        trigger: "hey there"
+        document_context: ""
+        expect:
+          action: do_nothing
+
+      - id: context_linking
+        trigger: "could be a 2 week sprint, need to discuss with sabesh"
+        document_context: "we should focus on setting up a waitlist for felix"
+        expect:
+          action: triage
+          min_items: 1
+          items_contain: ["sprint", "sabesh"]
+          context_contains: ["waitlist", "felix"]
+
+      - id: single_word_action
+        trigger: "laundry"
+        document_context: ""
+        expect:
+          action: triage
+          min_items: 1
+          items_contain: ["laundry"]
+
+      - id: context_only_elaboration
+        trigger: "need to get the design reviewed by Friday"
+        document_context: "homepage redesign for Felix"
+        expect:
+          action: triage
+          min_items: 1
+          items_contain: ["design", "reviewed"]
+
+      - id: gibberish
+        trigger: "asdfghjkl"
+        document_context: ""
+        expect:
+          action: do_nothing
+
+      - id: status_update_style
+        trigger: "close the billboard task"
+        document_context: ""
+        expect:
+          action: triage
+          min_items: 1
+          items_contain: ["billboard"]
+
+      - id: fact_style_input
+        trigger: "our brand color is blue"
+        document_context: ""
+        expect:
+          action: triage
+          min_items: 1
+          items_contain: ["brand", "blue"]

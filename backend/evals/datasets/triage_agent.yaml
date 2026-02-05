@@ -1,0 +1,91 @@
+groups:
+  - name: full_collection
+    fixtures: full
+    scenarios:
+      - id: create_new_unrelated
+        item:
+          text: "Buy a new laptop for work"
+          context: ""
+        expect:
+          action: create_todo
+          args_contain:
+            title: ["laptop"]
+
+      - id: update_existing_with_context
+        item:
+          text: "2 week sprint, need to discuss with sabesh"
+          context: "setting up a waitlist for felix"
+        expect:
+          action: update_todo
+          args_contain:
+            todo_id: "t3"
+
+      - id: save_fact_not_task
+        item:
+          text: "Our brand color is blue"
+          context: ""
+        expect:
+          action: save_fact
+          args_contain:
+            fact: ["brand", "blue"]
+
+      - id: status_change_complete
+        item:
+          text: "close that"
+          context: "BLR billboard"
+        expect:
+          action: update_todo
+          args_contain:
+            todo_id: "t4"
+            status: "completed"
+
+      - id: status_change_start
+        item:
+          text: "started working on it"
+          context: "dentist appointment"
+        expect:
+          action: update_todo
+          args_contain:
+            todo_id: "t5"
+            status: "in_progress"
+
+      - id: new_task_related_to_existing
+        item:
+          text: "hire a designer for the billboard"
+          context: ""
+        expect:
+          action: create_todo
+          args_contain:
+            title: ["designer", "billboard"]
+
+      - id: meaningless_greeting
+        item:
+          text: "hey thanks"
+          context: ""
+        expect:
+          action: do_nothing
+
+      - id: duplicate_existing
+        item:
+          text: "fix the auth bug"
+          context: ""
+        expect:
+          action: do_nothing
+
+      - id: fact_about_person
+        item:
+          text: "Sabesh prefers React over Vue"
+          context: ""
+        expect:
+          action: save_fact
+          args_contain:
+            fact: ["Sabesh", "React"]
+
+      - id: info_addition_to_todo
+        item:
+          text: "budget is 50k for this"
+          context: "BLR billboard advertising"
+        expect:
+          action: update_todo
+          args_contain:
+            todo_id: "t4"

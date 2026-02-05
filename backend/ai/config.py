@@ -11,11 +11,20 @@ load_dotenv()
 log = get_logger("config")
 
 
+_app_name = "Flex"
+
+
+def set_app_name(name: str) -> None:
+    """Set the application name used in LLM request headers."""
+    global _app_name
+    _app_name = name
+
+
 def get_llm() -> ChatOpenAI:
     """Get the configured LLM instance."""
     provider = os.getenv("PROVIDER", "OpenAI").lower()
     api_key = os.getenv("OPENROUTER_API_KEY")
-    
+
     if not api_key:
         raise ValueError("OPENROUTER_API_KEY is not set")
 
@@ -30,7 +39,7 @@ def get_llm() -> ChatOpenAI:
             base_url="https://openrouter.ai/api/v1",
             temperature=0.1,
             default_headers={
-                "X-Title": "Flex",
+                "X-Title": _app_name,
                 "HTTP-Referer": "https://flex.consciousengines.com/",
             },
             extra_body={"provider": {"order": ["cerebras"]}},
@@ -46,7 +55,7 @@ def get_llm() -> ChatOpenAI:
             base_url="https://openrouter.ai/api/v1",
             temperature=0.1,
             default_headers={
-                "X-Title": "Flex",
+                "X-Title": _app_name,
                 "HTTP-Referer": "https://flex.consciousengines.com/",
             },
         )
