@@ -225,25 +225,50 @@ You have access to these tools:
 WORKFLOW:
 1. If context is provided, search_todos using the context first (it likely refers to an existing todo)
 2. Then search_todos using the item text to find other related todos
-3. search_facts for relevant preferences or context
+3. ALWAYS search_facts before taking any action — look for relevant preferences, personal info, or context that could enrich your decision
 4. Make your decision by calling create_todo, update_todo, save_fact, or do_nothing
 
 DECISION LOGIC:
 
-**When context is provided**, the item is likely adding details to an existing todo:
+First, determine the INTENT of the item:
+
+1. **STATUS CHANGE** = the user wants to mark a todo as done, completed, started, cancelled, etc.
+   Keywords: "close", "done", "complete", "finish", "cancel", "start", "working on", "in progress"
+   → Find the related todo and use update_todo with the `status` parameter
+   → Use status="completed" for close/done/complete/finish
+   → Use status="in_progress" for start/working on/in progress
+   → Use status="cancelled" for cancel/drop/abandon
+   → Do NOT modify the description when the intent is just a status change
+
+2. **INFORMATION** = context, details, constraints (budget, deadline, requirements) about an existing todo
+   → Find the related todo and use update_todo to add the info to that todo's description
+
+3. **ACTIONABLE TASK** = something new that needs to be DONE (verb-based: hire, buy, fix, call, send, etc.)
+   → Use create_todo to create a new todo
+   → If related to an existing todo, set parent_id to link them
+
+**When context is provided**, the item is likely about an existing todo:
 - Search for the todo matching the context
-- If found, use update_todo to add the item text to that todo's description
-- Example: text="2 week sprint, discuss with sabesh", context="setting up a waitlist for felix"
+- Determine if the intent is a STATUS CHANGE, new ACTIONABLE TASK, or adding INFORMATION
+- Example status change: text="close that", context="BLR billboard" → search → update_todo(status="completed")
+- Example new task: text="figure out how to track this data", context="billboard traffic" → create_todo (this is a new verb-based task, not just info)
+- Example info addition: text="2 week sprint, discuss with sabesh", context="setting up a waitlist for felix"
   → search for "waitlist felix" → update_todo to add the new details
+
+**When context is provided but the item is a NEW ACTIONABLE TASK** (has a verb: figure out, set up, build, etc.):
+- Even though it relates to an existing todo, create a NEW todo for it
+- Set parent_id to link it to the related todo
+- Do NOT append new tasks to an existing todo's description
 
 **When NO context is provided**, decide based on the item text:
 
-ACTIONABLE TASK = something that needs to be DONE (verb-based: hire, buy, fix, call, send, etc.)
-INFORMATION = context, details, constraints (budget, deadline, requirements)
+If item is a STATUS CHANGE for an existing todo:
+- Search for the related todo and update its status
 
 If item is an ACTIONABLE TASK:
-- Use create_todo to create a new todo
-- If related to an existing todo, set parent_id to link them
+- If a matching todo already exists (any status, including completed) → do_nothing. Do NOT create a duplicate.
+- If no matching todo exists → create_todo
+- If related (but not the same) as an existing todo, set parent_id to link them
 
 If item is INFORMATION about an existing todo:
 - Use update_todo to add the info to that todo's description
@@ -255,7 +280,18 @@ If there is NO related todo:
 
 EXAMPLES:
 
-With context:
+Status changes:
+- text="close that", context="BLR billboard"
+  → search_todos("BLR billboard") → find todo → update_todo(todo_id="<id>", status="completed", tags=["billboard", "BLR"])
+
+- text="started working on it", context="homepage redesign"
+  → search_todos("homepage redesign") → find todo → update_todo(todo_id="<id>", status="in_progress", tags=["homepage", "redesign"])
+
+With context (new task related to existing todo):
+- text="figure out how to track this data", context="billboard traffic"
+  → search_todos("billboard traffic") → find completed todo → create_todo(title="Figure out how to track billboard traffic data", parent_id="<billboard-todo-id>", tags=["tracking", "billboard", "traffic", "data"])
+
+With context (adding info):
 - text="2 week sprint, discuss with sabesh", context="setting up a waitlist for felix"
   → search_todos("waitlist felix") → find todo → update_todo(todo_id="<id>", description="<existing> + Timeline: 2 week sprint. Need to discuss with Sabesh.", tags=["waitlist", "felix", "sprint", "sabesh"])
 
@@ -267,9 +303,12 @@ Without context:
   → search_todos → create_todo(title="Hire a designer for billboard", parent_id="<billboard-todo-id>", tags=["designer", "billboard", "hiring"])
 
 CRITICAL RULES:
-- When context is provided, prioritize finding and updating the related todo
-- ALWAYS search_todos before making any decision
-- Only use update_todo for adding INFORMATION to existing todos, not for new actionable tasks
+- When context is provided, prioritize finding the related todo — but still distinguish between status changes, new tasks, and information
+- ALWAYS search_todos AND search_facts before making any action (create_todo, update_todo, save_fact)
+- When the user wants to close/complete/cancel/start a todo, use the `status` parameter — do NOT append status info to the description
+- When the item text contains a NEW ACTION VERB (figure out, set up, build, track, hire, etc.), create a NEW todo — do NOT append it as a note on an existing todo's description
+- Only use update_todo's description for adding pure INFORMATION (details, constraints, context) — never for new actionable work
+- NEVER create a todo that duplicates an existing one (even if the existing one is completed/cancelled) — use do_nothing instead
 - Do NOT invent tasks beyond what was explicitly mentioned
 - TAGS ARE MANDATORY for every create_todo/update_todo call - always provide 2-5 searchable tags
 
@@ -315,6 +354,13 @@ def triage_agent(item: TriagePayload) -> None:
             response: AIMessage = llm_with_tools.invoke(messages)
             messages.append(response)
 
+            log.info(
+                f"LLM response iteration {i + 1}: "
+                f"content={response.content!r}, "
+                f"num_tool_calls={len(response.tool_calls)}, "
+                f"tool_calls={[(tc['name'], tc['args']) for tc in response.tool_calls]}"
+            )
+
             if not response.tool_calls:
                 log.warning("LLM returned no tool calls, prompting for decision")
                 messages.append(
@@ -324,6 +370,7 @@ def triage_agent(item: TriagePayload) -> None:
                 )
                 continue
 
+            terminal = False
             for tool_call in response.tool_calls:
                 name = tool_call["name"]
                 args = tool_call["args"]
@@ -339,6 +386,12 @@ def triage_agent(item: TriagePayload) -> None:
                 messages.append(
                     ToolMessage(content=result, tool_call_id=tool_call["id"])
                 )
+
+                if name == "do_nothing":
+                    terminal = True
+
+            if terminal:
+                break
 
     except Exception as e:
         log.error(f"Triage agent error: {e}")
