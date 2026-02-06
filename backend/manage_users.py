@@ -5,10 +5,15 @@ import argparse
 import asyncio
 import os
 
+from dotenv import load_dotenv
+load_dotenv()
+
 import bcrypt
 from tortoise import Tortoise
 
 DB_URL = os.getenv("DATABASE_URL", "postgres://flex:flex@localhost:5433/flex")
+if DB_URL.startswith("postgresql://"):
+    DB_URL = DB_URL.replace("postgresql://", "postgres://", 1)
 
 
 async def init_db():
