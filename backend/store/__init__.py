@@ -15,7 +15,7 @@ from .facts import (
     list_facts,
     FactSearchResult,
 )
-from .freewrite import load_freewrite
+from .freewrite import load_freewrite, save_freewrite
 
 
 def init():
@@ -36,4 +36,5 @@ __all__ = [
     "list_facts",
     "FactSearchResult",
     "load_freewrite",
+    "save_freewrite",
 ]

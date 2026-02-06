@@ -6,6 +6,7 @@ from qdrant_client.models import (
     Distance,
     FieldCondition,
     Filter,
+    MatchValue,
     MatchText,
     MultiVectorComparator,
     MultiVectorConfig,
@@ -66,6 +67,11 @@ def ensure_collection() -> None:
                 lowercase=True,
             ),
         )
+        client.create_payload_index(
+            collection_name=COLLECTION_NAME,
+            field_name="user_id",
+            field_schema="integer",
+        )
         log.info(f"Collection {COLLECTION_NAME} created successfully")
     else:
         log.debug(f"Collection {COLLECTION_NAME} already exists")
@@ -83,7 +89,7 @@ def _todo_from_payload(todo_id: str, payload: dict) -> TodoItem:
     )
 
 
-def _save(todo: TodoItem, tags: list[str] | None = None) -> TodoItem:
+def _save(todo: TodoItem, tags: list[str] | None = None, *, user_id: int) -> TodoItem:
     """Persist a TodoItem to Qdrant with multivector embeddings."""
     client = get_client()
 
@@ -97,9 +103,10 @@ def _save(todo: TodoItem, tags: list[str] | None = None) -> TodoItem:
     log.debug(f"Embedding {len(texts_to_embed)} texts for todo {todo.id}")
     embeddings = get_embeddings(texts_to_embed)
 
-    payload: dict[str, str | list[str] | None] = {
+    payload: dict[str, str | list[str] | int | None] = {
         "title": todo.title,
         "status": todo.status,
+        "user_id": user_id,
     }
 
     if todo.description:
@@ -130,6 +137,8 @@ def create_todo(
     description: str | None = None,
     parent_id: str | None = None,
     tags: list[str] | None = None,
+    *,
+    user_id: int,
 ) -> TodoItem:
     """Create a new todo and save it to the store."""
     now = datetime.now(timezone.utc).isoformat()
@@ -142,7 +151,7 @@ def create_todo(
         created_at=now,
         updated_at=now,
     )
-    _save(todo, tags=tags)
+    _save(todo, tags=tags, user_id=user_id)
     log.info(f"Created todo: {todo.id} - {title}")
     return todo
 
@@ -153,6 +162,8 @@ def update_todo(
     description: str | None = None,
     status: str | None = None,
     tags: list[str] | None = None,
+    *,
+    user_id: int,
 ) -> TodoItem:
     """Update an existing todo. Raises ValueError if not found."""
     existing = load_todo(todo_id)
@@ -169,7 +180,7 @@ def update_todo(
     data["updated_at"] = datetime.now(timezone.utc).isoformat()
 
     updated = TodoItem.model_validate(data)
-    _save(updated, tags=tags)
+    _save(updated, tags=tags, user_id=user_id)
     log.info(f"Updated todo: {todo_id}")
     return updated
 
@@ -190,11 +201,17 @@ def load_todo(todo_id: str) -> TodoItem | None:
     return _todo_from_payload(str(point.id), payload)
 
 
-def list_todos() -> list[TodoItem]:
-    """List all todos."""
+def list_todos(*, user_id: int) -> list[TodoItem]:
+    """List all todos for a user."""
     client = get_client()
 
-    results, _ = client.scroll(collection_name=COLLECTION_NAME, limit=1000)
+    results, _ = client.scroll(
+        collection_name=COLLECTION_NAME,
+        scroll_filter=Filter(
+            must=[FieldCondition(key="user_id", match=MatchValue(value=user_id))]
+        ),
+        limit=1000,
+    )
 
     todos = []
     for point in results:
@@ -202,7 +219,7 @@ def list_todos() -> list[TodoItem]:
         todo = _todo_from_payload(str(point.id), payload)
         todos.append(todo)
 
-    log.info(f"Listed {len(todos)} todos")
+    log.info(f"Listed {len(todos)} todos for user {user_id}")
     return todos
 
 
@@ -229,9 +246,11 @@ class SearchResult:
     score: float
 
 
-def search_todos(query: str, limit: int = 10) -> list[SearchResult]:
+def search_todos(query: str, *, user_id: int, limit: int = 10) -> list[SearchResult]:
     """Hybrid search: vector similarity + keyword matching."""
     client = get_client()
+
+    user_filter = FieldCondition(key="user_id", match=MatchValue(value=user_id))
 
     log.info(f"Searching todos for: {query}")
 
@@ -242,6 +261,7 @@ def search_todos(query: str, limit: int = 10) -> list[SearchResult]:
     vector_results = client.query_points(
         collection_name=COLLECTION_NAME,
         query=query_embedding,
+        query_filter=Filter(must=[user_filter]),
         limit=limit,
     )
 
@@ -256,6 +276,7 @@ def search_todos(query: str, limit: int = 10) -> list[SearchResult]:
     keyword_results, _ = client.scroll(
         collection_name=COLLECTION_NAME,
         scroll_filter=Filter(
+            must=[user_filter],
             should=[
                 FieldCondition(key="title", match=MatchText(text=query)),
                 FieldCondition(key="description", match=MatchText(text=query)),

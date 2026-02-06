@@ -102,7 +102,7 @@ def _extract_triage_items(
 
 
 async def run_freewrite_processor_agent(
-    trigger: str, document_id: str | None = None, document_context: str = ""
+    trigger: str, document_id: str | None = None, document_context: str = "", *, user_id: int
 ) -> None:
     """Entry point: extract items from trigger text, fan out to triage agents."""
     doc_id = document_id or f"cli-{uuid.uuid4().hex[:8]}"
@@ -131,7 +131,7 @@ async def run_freewrite_processor_agent(
         # Fan out to triage agents
         log.info(f"Dispatching {len(triage_items)} items to triage agents")
         await asyncio.gather(
-            *[asyncio.to_thread(triage_agent, item) for item in triage_items]
+            *[asyncio.to_thread(triage_agent, item, user_id=user_id) for item in triage_items]
         )
 
         log.info("Freewrite processor complete")

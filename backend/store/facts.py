@@ -4,6 +4,7 @@ from qdrant_client.models import (
     Distance,
     FieldCondition,
     Filter,
+    MatchValue,
     MatchText,
     MultiVectorComparator,
     MultiVectorConfig,
@@ -62,12 +63,17 @@ def ensure_collection() -> None:
             field_name="category",
             field_schema="keyword",
         )
+        client.create_payload_index(
+            collection_name=COLLECTION_NAME,
+            field_name="user_id",
+            field_schema="integer",
+        )
         log.info(f"Collection {COLLECTION_NAME} created successfully")
     else:
         log.debug(f"Collection {COLLECTION_NAME} already exists")
 
 
-def save_fact(fact: FactItem, tags: list[str] | None = None) -> FactItem:
+def save_fact(fact: FactItem, tags: list[str] | None = None, *, user_id: int) -> FactItem:
     """Save fact with variable-length multivector based on tags."""
     client = get_client()
 
@@ -78,9 +84,10 @@ def save_fact(fact: FactItem, tags: list[str] | None = None) -> FactItem:
     log.debug(f"Embedding {len(texts_to_embed)} texts for fact {fact.id}")
     embeddings = get_embeddings(texts_to_embed)
 
-    payload: dict[str, str | list[str] | None] = {
+    payload: dict[str, str | list[str] | int | None] = {
         "fact": fact.fact,
         "category": fact.category,
+        "user_id": user_id,
     }
 
     if fact.tags:
@@ -108,9 +115,11 @@ class FactSearchResult:
     score: float
 
 
-def search_facts(query: str, limit: int = 10) -> list[FactSearchResult]:
+def search_facts(query: str, *, user_id: int, limit: int = 10) -> list[FactSearchResult]:
     """Hybrid search: vector similarity + keyword matching."""
     client = get_client()
+
+    user_filter = FieldCondition(key="user_id", match=MatchValue(value=user_id))
 
     log.info(f"Searching facts for: {query}")
 
@@ -121,6 +130,7 @@ def search_facts(query: str, limit: int = 10) -> list[FactSearchResult]:
     vector_results = client.query_points(
         collection_name=COLLECTION_NAME,
         query=query_embedding,
+        query_filter=Filter(must=[user_filter]),
         limit=limit,
     )
 
@@ -141,6 +151,7 @@ def search_facts(query: str, limit: int = 10) -> list[FactSearchResult]:
     keyword_results, _ = client.scroll(
         collection_name=COLLECTION_NAME,
         scroll_filter=Filter(
+            must=[user_filter],
             should=[
                 FieldCondition(key="fact", match=MatchText(text=query)),
             ]
@@ -171,11 +182,17 @@ def search_facts(query: str, limit: int = 10) -> list[FactSearchResult]:
     return search_results
 
 
-def list_facts() -> list[FactItem]:
-    """List all facts."""
+def list_facts(*, user_id: int) -> list[FactItem]:
+    """List all facts for a user."""
     client = get_client()
 
-    results, _ = client.scroll(collection_name=COLLECTION_NAME, limit=1000)
+    results, _ = client.scroll(
+        collection_name=COLLECTION_NAME,
+        scroll_filter=Filter(
+            must=[FieldCondition(key="user_id", match=MatchValue(value=user_id))]
+        ),
+        limit=1000,
+    )
 
     facts = []
     for point in results:
@@ -189,5 +206,5 @@ def list_facts() -> list[FactItem]:
         )
         facts.append(fact)
 
-    log.info(f"Listed {len(facts)} facts")
+    log.info(f"Listed {len(facts)} facts for user {user_id}")
     return facts

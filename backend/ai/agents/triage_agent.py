@@ -21,189 +21,189 @@ from store.facts import save_fact as _save_fact, search_facts as _search_facts
 log = get_logger("triage_agent")
 
 
-@tool
-def search_todos(query: str) -> str:
-    """Search for existing todos by semantic similarity and keyword matching.
+def make_tools(user_id: int) -> list:
+    """Build triage tools with user_id closed over so the LLM never sees it."""
 
-    Use this to find todos that might be related to the current item.
-    Try different search terms to find relevant matches - search by topic,
-    technology, feature name, or action type.
+    @tool
+    def search_todos(query: str) -> str:
+        """Search for existing todos by semantic similarity and keyword matching.
 
-    Args:
-        query: Search terms to find matching todos (e.g., "authentication", "login bug", "JWT")
+        Use this to find todos that might be related to the current item.
+        Try different search terms to find relevant matches - search by topic,
+        technology, feature name, or action type.
 
-    Returns:
-        JSON list of matching todos with their IDs, titles, status, and relevance scores
-    """
-    results: list[SearchResult] = _search_todos(query, limit=10)
+        Args:
+            query: Search terms to find matching todos (e.g., "authentication", "login bug", "JWT")
 
-    if not results:
-        return "No matching todos found."
+        Returns:
+            JSON list of matching todos with their IDs, titles, status, and relevance scores
+        """
+        results: list[SearchResult] = _search_todos(query, user_id=user_id, limit=10)
 
-    todos_data = []
-    for result in results:
-        t = result.todo
-        todo_info: dict = {
-            "id": t.id,
-            "title": t.title,
-            "status": t.status,
-            "relevance_score": round(result.score, 3),
-        }
-        if t.parent_id:
-            todo_info["parent_id"] = t.parent_id
-        if t.description:
-            todo_info["description"] = t.description
-        todos_data.append(todo_info)
+        if not results:
+            return "No matching todos found."
 
-    return json.dumps(todos_data, indent=2)
+        todos_data = []
+        for result in results:
+            t = result.todo
+            todo_info: dict = {
+                "id": t.id,
+                "title": t.title,
+                "status": t.status,
+                "relevance_score": round(result.score, 3),
+            }
+            if t.parent_id:
+                todo_info["parent_id"] = t.parent_id
+            if t.description:
+                todo_info["description"] = t.description
+            todos_data.append(todo_info)
 
+        return json.dumps(todos_data, indent=2)
 
-@tool
-def search_facts(query: str) -> str:
-    """Search for known facts about the user by semantic similarity and keyword matching.
+    @tool
+    def search_facts(query: str) -> str:
+        """Search for known facts about the user by semantic similarity and keyword matching.
 
-    Use this to find relevant context about the user that might inform your decision.
-    Facts include user preferences, personal info, work context, etc.
+        Use this to find relevant context about the user that might inform your decision.
+        Facts include user preferences, personal info, work context, etc.
 
-    Args:
-        query: Search terms to find matching facts (e.g., "preferences", "work", "programming")
+        Args:
+            query: Search terms to find matching facts (e.g., "preferences", "work", "programming")
 
-    Returns:
-        JSON list of matching facts with their categories and relevance scores
-    """
-    results: list[FactSearchResult] = _search_facts(query, limit=5)
+        Returns:
+            JSON list of matching facts with their categories and relevance scores
+        """
+        results: list[FactSearchResult] = _search_facts(query, user_id=user_id, limit=5)
 
-    if not results:
-        return "No matching facts found."
+        if not results:
+            return "No matching facts found."
 
-    facts_data = []
-    for result in results:
-        f = result.fact
-        fact_info: dict = {
-            "fact": f.fact,
-            "category": f.category,
-            "relevance_score": round(result.score, 3),
-        }
-        if f.tags:
-            fact_info["tags"] = f.tags
-        facts_data.append(fact_info)
+        facts_data = []
+        for result in results:
+            f = result.fact
+            fact_info: dict = {
+                "fact": f.fact,
+                "category": f.category,
+                "relevance_score": round(result.score, 3),
+            }
+            if f.tags:
+                fact_info["tags"] = f.tags
+            facts_data.append(fact_info)
 
-    return json.dumps(facts_data, indent=2)
+        return json.dumps(facts_data, indent=2)
 
+    @tool
+    def save_fact(
+        fact: str,
+        category: Literal["preference", "personal", "work", "context", "other"],
+        tags: list[str],
+    ) -> str:
+        """Save a fact about the user for future reference.
 
-@tool
-def save_fact(
-    fact: str,
-    category: Literal["preference", "personal", "work", "context", "other"],
-    tags: list[str],
-) -> str:
-    """Save a fact about the user for future reference.
+        Use this when you find information worth remembering that is NOT task-related.
+        Only call this AFTER searching todos to confirm there's no related task.
 
-    Use this when you find information worth remembering that is NOT task-related.
-    Only call this AFTER searching todos to confirm there's no related task.
+        Args:
+            fact: The fact to remember about the user
+            category: Category of the fact
+                - "preference": User preferences, styles, likes/dislikes
+                - "personal": Personal info about the user
+                - "work": Work-related context, projects, team info
+                - "context": General knowledge, guidelines, rules, ideas
+                - "other": Anything else worth remembering
+            tags: Keywords for semantic search (e.g., ["budget", "billboard", "marketing"])
 
-    Args:
-        fact: The fact to remember about the user
-        category: Category of the fact
-            - "preference": User preferences, styles, likes/dislikes
-            - "personal": Personal info about the user
-            - "work": Work-related context, projects, team info
-            - "context": General knowledge, guidelines, rules, ideas
-            - "other": Anything else worth remembering
-        tags: Keywords for semantic search (e.g., ["budget", "billboard", "marketing"])
-
-    Returns:
-        Confirmation that the fact was saved
-    """
-    fact_item = FactItem(
-        id=str(uuid.uuid4()),
-        fact=fact,
-        category=category,
-        tags=tags,
-        created_at=datetime.now().isoformat(),
-    )
-    _save_fact(fact_item, tags=tags)
-    log.info(f"Saved fact: {fact[:50]}...")
-    return f"Fact saved: {fact}"
-
-
-@tool
-def create_todo(
-    title: str,
-    tags: list[str],
-    description: str | None = None,
-    parent_id: str | None = None,
-) -> str:
-    """Create a new todo item.
-
-    Args:
-        title: Title close to the original item text
-        tags: 2-5 searchable tags/topics (e.g., ["groceries", "shopping"])
-        description: Optional description with relevant details
-        parent_id: ID of existing todo to set as parent if related
-    """
-    todo = _create_todo(title=title, description=description, parent_id=parent_id, tags=tags)
-
-    details = f"ID: {todo.id}\nTitle: {title}"
-    if description:
-        details += f"\nDescription: {description}"
-    if parent_id:
-        details += f"\nParent ID: {parent_id}"
-    AgentLog.result("triage", f"Created todo:\n{details}")
-
-    return f"Todo created: {title} (ID: {todo.id})"
-
-
-@tool
-def update_todo(
-    todo_id: str,
-    tags: list[str],
-    title: str | None = None,
-    description: str | None = None,
-    status: Literal["pending", "in_progress", "completed", "cancelled"] | None = None,
-) -> str:
-    """Update an existing todo item.
-
-    Args:
-        todo_id: ID of the todo to update
-        tags: 2-5 searchable tags/topics
-        title: New title if it should change
-        description: COMPLETE new description (preserve existing + add new)
-        status: New status if it should change
-    """
-    try:
-        _update_todo(todo_id, title=title, description=description, status=status, tags=tags)
-    except ValueError as e:
-        log.warning(str(e))
-        return f"Error: {e}"
-
-    changes = []
-    if title is not None:
-        changes.append(f"Title: {title}")
-    if description is not None:
-        changes.append(
-            f"Description: {description[:100]}{'...' if len(description) > 100 else ''}"
+        Returns:
+            Confirmation that the fact was saved
+        """
+        fact_item = FactItem(
+            id=str(uuid.uuid4()),
+            fact=fact,
+            category=category,
+            tags=tags,
+            created_at=datetime.now().isoformat(),
         )
-    if status is not None:
-        changes.append(f"Status: {status}")
-    AgentLog.result(
-        "triage",
-        f"Updated todo {todo_id}:\n" + "\n".join(changes)
-        if changes
-        else "No changes",
-    )
+        _save_fact(fact_item, tags=tags, user_id=user_id)
+        log.info(f"Saved fact: {fact[:50]}...")
+        return f"Fact saved: {fact}"
 
-    return f"Todo updated: {todo_id}"
+    @tool
+    def create_todo(
+        title: str,
+        tags: list[str],
+        description: str | None = None,
+        parent_id: str | None = None,
+    ) -> str:
+        """Create a new todo item.
 
+        Args:
+            title: Title close to the original item text
+            tags: 2-5 searchable tags/topics (e.g., ["groceries", "shopping"])
+            description: Optional description with relevant details
+            parent_id: ID of existing todo to set as parent if related
+        """
+        todo = _create_todo(title=title, description=description, parent_id=parent_id, tags=tags, user_id=user_id)
 
-@tool
-def do_nothing(reason: str) -> str:
-    """Use when no action is needed - no todo to create/update and no fact worth saving.
+        details = f"ID: {todo.id}\nTitle: {title}"
+        if description:
+            details += f"\nDescription: {description}"
+        if parent_id:
+            details += f"\nParent ID: {parent_id}"
+        AgentLog.result("triage", f"Created todo:\n{details}")
 
-    Args:
-        reason: Brief explanation of why no action is needed
-    """
-    return f"No action taken: {reason}"
+        return f"Todo created: {title} (ID: {todo.id})"
+
+    @tool
+    def update_todo(
+        todo_id: str,
+        tags: list[str],
+        title: str | None = None,
+        description: str | None = None,
+        status: Literal["pending", "in_progress", "completed", "cancelled"] | None = None,
+    ) -> str:
+        """Update an existing todo item.
+
+        Args:
+            todo_id: ID of the todo to update
+            tags: 2-5 searchable tags/topics
+            title: New title if it should change
+            description: COMPLETE new description (preserve existing + add new)
+            status: New status if it should change
+        """
+        try:
+            _update_todo(todo_id, title=title, description=description, status=status, tags=tags, user_id=user_id)
+        except ValueError as e:
+            log.warning(str(e))
+            return f"Error: {e}"
+
+        changes = []
+        if title is not None:
+            changes.append(f"Title: {title}")
+        if description is not None:
+            changes.append(
+                f"Description: {description[:100]}{'...' if len(description) > 100 else ''}"
+            )
+        if status is not None:
+            changes.append(f"Status: {status}")
+        AgentLog.result(
+            "triage",
+            f"Updated todo {todo_id}:\n" + "\n".join(changes)
+            if changes
+            else "No changes",
+        )
+
+        return f"Todo updated: {todo_id}"
+
+    @tool
+    def do_nothing(reason: str) -> str:
+        """Use when no action is needed - no todo to create/update and no fact worth saving.
+
+        Args:
+            reason: Brief explanation of why no action is needed
+        """
+        return f"No action taken: {reason}"
+
+    return [search_todos, search_facts, save_fact, create_todo, update_todo, do_nothing]
 
 
 TRIAGE_AGENT_PROMPT = """You are a triage agent that decides how to handle a SINGLE mentioned item.
@@ -327,7 +327,7 @@ For update_todo:
 MAX_TOOL_CALLS = 5
 
 
-def triage_agent(item: TriagePayload) -> None:
+def triage_agent(item: TriagePayload, *, user_id: int) -> None:
     """Triage a single item using tool-calling to search for existing todos."""
     log.info(f"Triaging item: {item.text}")
     AgentLog.section(f"Triage: {item.text[:50]}{'...' if len(item.text) > 50 else ''}")
@@ -344,7 +344,7 @@ def triage_agent(item: TriagePayload) -> None:
     ]
 
     llm = get_llm()
-    tools = [search_todos, search_facts, save_fact, create_todo, update_todo, do_nothing]
+    tools = make_tools(user_id)
     llm_with_tools = llm.bind_tools(tools)
 
     try:

@@ -13,7 +13,8 @@ class PipelineTrigger:
 
     trigger: str
     document_id: str
-    document_context: str = ""  # Pre-extracted and truncated document text
+    user_id: int
+    document_context: str = ""
 
 
 class PipelineQueueManager:
@@ -28,12 +29,14 @@ class PipelineQueueManager:
         self,
         trigger: str,
         document_id: str,
+        user_id: int,
         document_context: str = "",
     ) -> None:
         """Add a trigger to the queue."""
         item = PipelineTrigger(
             trigger=trigger,
             document_id=document_id,
+            user_id=user_id,
             document_context=document_context,
         )
         await self._queue.put(item)
@@ -59,6 +62,7 @@ class PipelineQueueManager:
                         trigger=item.trigger,
                         document_context=item.document_context,
                         document_id=item.document_id,
+                        user_id=item.user_id,
                     )
                     log.info(f"Pipeline complete for {item.document_id}")
                 except Exception as e:

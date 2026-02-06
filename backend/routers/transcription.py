@@ -1,7 +1,9 @@
 import os
 
 import httpx
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, Depends, HTTPException
+
+from auth import verify_user
 
 router = APIRouter(prefix="/api/transcription", tags=["transcription"])
 
@@ -10,7 +12,7 @@ OPENAI_SESSION_URL = "https://api.openai.com/v1/realtime/transcription_sessions"
 
 
 @router.post("/session")
-async def create_transcription_session():
+async def create_transcription_session(user: dict = Depends(verify_user)):
     if not OPENAI_API_KEY:
         raise HTTPException(status_code=500, detail="OPENAI_API_KEY not configured")
 

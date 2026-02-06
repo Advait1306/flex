@@ -1,7 +1,8 @@
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
 
 from ai.logging_config import get_logger
+from auth import verify_user
 from store import create_todo as store_create_todo, update_todo as store_update_todo, delete_todo, list_todos, load_todo
 
 log = get_logger("api.todos")
@@ -22,15 +23,15 @@ class TodoUpdateRequest(BaseModel):
 
 
 @router.get("/todos")
-async def get_todos():
+async def get_todos(user: dict = Depends(verify_user)):
     """Get all todos."""
     log.debug("Listing all todos")
-    todos = list_todos()
+    todos = list_todos(user_id=user["id"])
     return {"todos": [t.model_dump(exclude_none=True) for t in todos]}
 
 
 @router.get("/todos/{todo_id}")
-async def get_todo(todo_id: str):
+async def get_todo(todo_id: str, user: dict = Depends(verify_user)):
     """Get a specific todo."""
     log.debug(f"Getting todo: {todo_id}")
     todo = load_todo(todo_id)
@@ -41,7 +42,7 @@ async def get_todo(todo_id: str):
 
 
 @router.post("/todos")
-async def create_todo(todo: TodoCreate):
+async def create_todo(todo: TodoCreate, user: dict = Depends(verify_user)):
     """Create a new todo manually."""
     log.info(f"Creating todo manually: {todo.title}")
 
@@ -49,13 +50,14 @@ async def create_todo(todo: TodoCreate):
         title=todo.title,
         description=todo.description,
         parent_id=todo.parent_id,
+        user_id=user["id"],
     )
     log.info(f"Created todo: {saved.id}")
     return saved.model_dump(exclude_none=True)
 
 
 @router.patch("/todos/{todo_id}")
-async def update_todo(todo_id: str, updates: TodoUpdateRequest):
+async def update_todo(todo_id: str, updates: TodoUpdateRequest, user: dict = Depends(verify_user)):
     """Update a todo."""
     log.info(f"Updating todo: {todo_id}")
 
@@ -65,6 +67,7 @@ async def update_todo(todo_id: str, updates: TodoUpdateRequest):
             title=updates.title,
             description=updates.description,
             status=updates.status,
+            user_id=user["id"],
         )
     except ValueError:
         log.warning(f"Todo not found: {todo_id}")
@@ -75,7 +78,7 @@ async def update_todo(todo_id: str, updates: TodoUpdateRequest):
 
 
 @router.delete("/todos/{todo_id}")
-async def delete_todo_endpoint(todo_id: str):
+async def delete_todo_endpoint(todo_id: str, user: dict = Depends(verify_user)):
     """Delete a todo."""
     log.info(f"Deleting todo: {todo_id}")
 

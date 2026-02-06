@@ -32,10 +32,10 @@ def _evaluate_once(scenario: dict) -> dict[str, bool]:
          patch("store.facts.COLLECTION_NAME", "facts_eval"):
 
         if scenario["type"] == "todos":
-            results = search_todos(query=scenario["query"], limit=10)
+            results = search_todos(query=scenario["query"], user_id=0, limit=10)
             result_ids = [r.todo.id for r in results]
         else:
-            results = search_facts(query=scenario["query"], limit=10)
+            results = search_facts(query=scenario["query"], user_id=0, limit=10)
             result_ids = [r.fact.id for r in results]
 
     checks = {}

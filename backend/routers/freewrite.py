@@ -1,36 +1,16 @@
-import json
-from pathlib import Path
 from typing import Any, List
 
-from fastapi import APIRouter
+from fastapi import APIRouter, Depends
 from pydantic import BaseModel
 
 from ai.logging_config import get_logger
 from ai.queue_manager import get_queue_manager
+from auth import verify_user
+from store import load_freewrite, save_freewrite
 
 log = get_logger("api.freewrite")
 
 router = APIRouter(prefix="/api", tags=["freewrite"])
-
-# File-based storage
-STORAGE_DIR = Path(__file__).parent.parent.parent / "storage"
-STORAGE_DIR.mkdir(exist_ok=True)
-FREEWRITE_FILE = STORAGE_DIR / "freewrite.json"
-
-DOCUMENT_ID = "freewrite"
-
-
-def load_data() -> list:
-    if FREEWRITE_FILE.exists():
-        with open(FREEWRITE_FILE, "r") as f:
-            data = json.load(f)
-            return data.get("content", [])
-    return []
-
-
-def save_data(content: list):
-    with open(FREEWRITE_FILE, "w") as f:
-        json.dump({"content": content}, f, indent=2)
 
 
 class FreewriteContent(BaseModel):
@@ -61,16 +41,16 @@ def truncate_to_last_n_words(text: str, max_words: int = 10000) -> str:
 
 
 @router.get("/freewrite")
-def get_freewrite():
+async def get_freewrite(user: dict = Depends(verify_user)):
     """Get freewrite content."""
-    content = load_data()
-    return {"content": content}
+    content = await load_freewrite(user["id"])
+    return {"content": content or []}
 
 
 @router.put("/freewrite")
-async def save_freewrite(body: FreewriteContent):
+async def put_freewrite(body: FreewriteContent, user: dict = Depends(verify_user)):
     """Save freewrite content and trigger pipeline on new content."""
-    old_content = load_data()
+    old_content = await load_freewrite(user["id"]) or []
     old_text = extract_text_from_blocks(old_content)
 
     new_text = extract_text_from_blocks(body.content)
@@ -87,7 +67,7 @@ async def save_freewrite(body: FreewriteContent):
         log.info(f"[CHANGED] {trigger_text}")
 
     # Save first
-    save_data(body.content)
+    await save_freewrite(user["id"], body.content)
 
     # Queue pipeline trigger if there's new content
     if trigger_text:
@@ -97,7 +77,8 @@ async def save_freewrite(body: FreewriteContent):
         queue_manager = get_queue_manager()
         await queue_manager.enqueue(
             trigger=trigger_text,
-            document_id=DOCUMENT_ID,
+            document_id=f"freewrite:{user['id']}",
+            user_id=user["id"],
             document_context=doc_context,
         )
         status = queue_manager.get_status()

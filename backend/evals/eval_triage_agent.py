@@ -29,7 +29,7 @@ def _evaluate_once(scenario: dict) -> dict[str, bool]:
     expected = scenario["expect"]
     recorded_actions = []
 
-    def fake_create_todo(title, description=None, parent_id=None, tags=None):
+    def fake_create_todo(title, description=None, parent_id=None, tags=None, user_id=None):
         recorded_actions.append(("create_todo", {
             "title": title,
             "description": description,
@@ -41,7 +41,7 @@ def _evaluate_once(scenario: dict) -> dict[str, bool]:
             parent_id=parent_id, status="pending",
         )
 
-    def fake_update_todo(todo_id, title=None, description=None, status=None, tags=None):
+    def fake_update_todo(todo_id, title=None, description=None, status=None, tags=None, user_id=None):
         recorded_actions.append(("update_todo", {
             "todo_id": todo_id,
             "title": title,
@@ -54,7 +54,7 @@ def _evaluate_once(scenario: dict) -> dict[str, bool]:
             description=description, status=status or "pending",
         )
 
-    def fake_save_fact(fact_item, tags=None):
+    def fake_save_fact(fact_item, tags=None, user_id=None):
         recorded_actions.append(("save_fact", {
             "fact": fact_item.fact,
             "category": fact_item.category,
@@ -72,7 +72,7 @@ def _evaluate_once(scenario: dict) -> dict[str, bool]:
             text=scenario["item"]["text"],
             context=scenario["item"]["context"],
         )
-        triage_agent(item)
+        triage_agent(item, user_id=0)
 
     if recorded_actions:
         final_action = recorded_actions[-1][0]

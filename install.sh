@@ -16,20 +16,10 @@ fi
 echo "  Installing Python dependencies..."
 uv sync
 
-# Qdrant container
+# Docker containers (Qdrant + Postgres)
 echo ""
-echo "Checking Qdrant container..."
-if docker ps -a --format '{{.Names}}' | grep -q '^flex-qdrant$'; then
-    if docker ps --format '{{.Names}}' | grep -q '^flex-qdrant$'; then
-        echo "  Qdrant container already running, skipping..."
-    else
-        echo "  Starting existing Qdrant container..."
-        docker start flex-qdrant
-    fi
-else
-    echo "  Creating and starting Qdrant container..."
-    docker-compose up -d
-fi
+echo "Starting Docker containers..."
+docker compose up -d
 cd ..
 
 # Frontend dependencies

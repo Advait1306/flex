@@ -3,16 +3,11 @@ set -e
 
 cd "$(dirname "$0")"
 
-ensure_qdrant() {
-    if ! docker ps --format '{{.Names}}' | grep -q '^flex-qdrant$'; then
-        if docker ps -a --format '{{.Names}}' | grep -q '^flex-qdrant$'; then
-            echo "Starting Qdrant container..."
-            docker start flex-qdrant
-        else
-            echo "Qdrant container not found. Run ./install.sh first."
-            exit 1
-        fi
-    fi
+ensure_services() {
+    # Start all containers (Qdrant + Postgres)
+    cd backend
+    docker compose up -d
+    cd ..
 
     # Wait for Qdrant to be ready
     echo -n "Waiting for Qdrant to be ready"
@@ -21,10 +16,18 @@ ensure_qdrant() {
         sleep 0.5
     done
     echo " ready!"
+
+    # Wait for Postgres to be ready
+    echo -n "Waiting for Postgres to be ready"
+    until docker exec flex-postgres pg_isready -U flex > /dev/null 2>&1; do
+        echo -n "."
+        sleep 0.5
+    done
+    echo " ready!"
 }
 
 run_backend() {
-    ensure_qdrant
+    ensure_services
     echo "Starting backend on http://localhost:8000"
     cd backend
     uv run uvicorn main:app --reload
@@ -37,7 +40,7 @@ run_frontend() {
 }
 
 run_both() {
-    ensure_qdrant
+    ensure_services
     SESSION="flex"
 
     # Kill existing session if it exists
