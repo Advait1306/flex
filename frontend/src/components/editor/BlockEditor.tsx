@@ -56,7 +56,7 @@ export const BlockEditor = forwardRef<BlockEditorHandle, BlockEditorProps>(
             ? lastBlock.content
             : [];
           editor.updateBlock(lastBlock, {
-            content: [...existingContent, { type: "text", text: text + " " }],
+            content: [...existingContent, { type: "text", text: text + " ", styles: {} }],
           });
           save();
         },
