@@ -14,6 +14,8 @@ from ai.logging_config import setup_logging, get_logger
 log = get_logger("cli")
 
 DB_URL = os.getenv("DATABASE_URL", "postgres://flex:flex@localhost:5433/flex")
+if DB_URL.startswith("postgresql://"):
+    DB_URL = DB_URL.replace("postgresql://", "postgres://", 1)
 
 
 async def init_db():

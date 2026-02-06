@@ -9,6 +9,8 @@ from routers import facts_router, freewrite_router, todos_router, transcription_
 import store
 
 DB_URL = os.getenv("DATABASE_URL", "postgres://flex:flex@localhost:5433/flex")
+if DB_URL.startswith("postgresql://"):
+    DB_URL = DB_URL.replace("postgresql://", "postgres://", 1)
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
