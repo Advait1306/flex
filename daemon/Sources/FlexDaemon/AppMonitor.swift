@@ -7,10 +7,7 @@ public struct MonitoredApp {
 }
 
 public final class AppMonitor {
-    private static let targetBundleIds: Set<String> = [
-        "com.tinyspeck.slackmacgap",
-        "com.linear",
-    ]
+    private static let targetBundleIds: Set<String> = AppClassifier.allKnownBundleIds()
 
     private var runningApps: [String: MonitoredApp] = [:]  // bundleId -> MonitoredApp
     private let onChange: ([MonitoredApp]) -> Void

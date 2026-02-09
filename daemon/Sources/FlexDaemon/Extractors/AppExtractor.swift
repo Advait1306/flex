@@ -50,6 +50,10 @@ public enum AppClassifier {
         if bundleId == safariBundleId { return .safari }
         return .generic
     }
+
+    public static func allKnownBundleIds() -> Set<String> {
+        electronBundleIds.union(chromiumBundleIds).union([safariBundleId])
+    }
 }
 
 // MARK: - Chromium AppleScript extraction

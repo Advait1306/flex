@@ -6,6 +6,15 @@ public class AppDelegate: NSObject, NSApplicationDelegate {
     private var appMonitor: AppMonitor!
     private var accessibilityManager: AccessibilityManager!
     private var isPaused = false
+    private var monitoredApps: [MonitoredApp] = []
+
+    private static let pollingIntervals: [(label: String, interval: TimeInterval)] = [
+        ("1s", 1.0),
+        ("5s", 5.0),
+        ("10s", 10.0),
+        ("20s", 20.0),
+    ]
+    private var selectedPollingInterval: TimeInterval = 1.0
 
     public override init() {
         super.init()
@@ -14,13 +23,12 @@ public class AppDelegate: NSObject, NSApplicationDelegate {
     public func applicationDidFinishLaunching(_ notification: Notification) {
         setupStatusItem()
 
-        let diffEngine = DiffEngine()
-        let outputPrinter = OutputPrinter()
-        accessibilityManager = AccessibilityManager(diffEngine: diffEngine, outputPrinter: outputPrinter)
+        accessibilityManager = AccessibilityManager()
 
         appMonitor = AppMonitor { [weak self] runningApps in
+            self?.monitoredApps = runningApps
             self?.accessibilityManager.updateMonitoredApps(runningApps)
-            self?.updateMenu(monitoredApps: runningApps.map(\.name))
+            self?.rebuildMenu()
         }
         appMonitor.start()
     }
@@ -30,10 +38,10 @@ public class AppDelegate: NSObject, NSApplicationDelegate {
         if let button = statusItem.button {
             button.image = NSImage(systemSymbolName: "eye", accessibilityDescription: "Flex Daemon")
         }
-        updateMenu(monitoredApps: [])
+        rebuildMenu()
     }
 
-    func updateMenu(monitoredApps: [String]) {
+    private func rebuildMenu() {
         let menu = NSMenu()
 
         if monitoredApps.isEmpty {
@@ -41,12 +49,37 @@ public class AppDelegate: NSObject, NSApplicationDelegate {
             item.isEnabled = false
             menu.addItem(item)
         } else {
-            let item = NSMenuItem(
-                title: "Monitoring: \(monitoredApps.joined(separator: ", "))",
-                action: nil, keyEquivalent: "")
-            item.isEnabled = false
-            menu.addItem(item)
+            let header = NSMenuItem(title: "Monitored Apps", action: nil, keyEquivalent: "")
+            header.isEnabled = false
+            menu.addItem(header)
+
+            for app in monitoredApps.sorted(by: { $0.name < $1.name }) {
+                let item = NSMenuItem(title: app.name, action: #selector(toggleApp(_:)), keyEquivalent: "")
+                item.target = self
+                item.representedObject = app.bundleId
+                if accessibilityManager.enabledApps.contains(app.bundleId) {
+                    item.state = .on
+                } else {
+                    item.state = .off
+                }
+                menu.addItem(item)
+            }
         }
+
+        menu.addItem(NSMenuItem.separator())
+
+        // Polling interval submenu
+        let pollingItem = NSMenuItem(title: "Polling Interval", action: nil, keyEquivalent: "")
+        let pollingSubmenu = NSMenu()
+        for option in Self.pollingIntervals {
+            let item = NSMenuItem(title: option.label, action: #selector(setPollingInterval(_:)), keyEquivalent: "")
+            item.target = self
+            item.representedObject = option.interval
+            item.state = option.interval == selectedPollingInterval ? .on : .off
+            pollingSubmenu.addItem(item)
+        }
+        pollingItem.submenu = pollingSubmenu
+        menu.addItem(pollingItem)
 
         menu.addItem(NSMenuItem.separator())
 
@@ -64,6 +97,20 @@ public class AppDelegate: NSObject, NSApplicationDelegate {
         statusItem.menu = menu
     }
 
+    @objc private func toggleApp(_ sender: NSMenuItem) {
+        guard let bundleId = sender.representedObject as? String else { return }
+        let isCurrentlyEnabled = accessibilityManager.enabledApps.contains(bundleId)
+        accessibilityManager.setEnabled(bundleId: bundleId, enabled: !isCurrentlyEnabled)
+        rebuildMenu()
+    }
+
+    @objc private func setPollingInterval(_ sender: NSMenuItem) {
+        guard let interval = sender.representedObject as? TimeInterval else { return }
+        selectedPollingInterval = interval
+        accessibilityManager.setPollingInterval(interval)
+        rebuildMenu()
+    }
+
     @objc private func togglePause() {
         isPaused.toggle()
         if isPaused {
@@ -73,7 +120,7 @@ public class AppDelegate: NSObject, NSApplicationDelegate {
             accessibilityManager.resume()
             print("[FlexDaemon] Monitoring resumed")
         }
-        updateMenu(monitoredApps: appMonitor.currentAppNames())
+        rebuildMenu()
     }
 
     @objc private func quit() {

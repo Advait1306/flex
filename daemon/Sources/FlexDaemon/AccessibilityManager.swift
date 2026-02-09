@@ -1,20 +1,18 @@
 import AppKit
+import CryptoKit
 
 public final class AccessibilityManager {
-    private let diffEngine: DiffEngine
-    private let outputPrinter: OutputPrinter
     private var pollingTimers: [String: Timer] = [:]           // bundleId -> timer
     private var categories: [String: AppCategory] = [:]        // bundleId -> category
     private var appNames: [String: String] = [:]               // bundleId -> display name
     private var pids: [String: pid_t] = [:]                    // bundleId -> pid
+    private var lastHashes: [String: String] = [:]             // bundleId -> hash
     private var isPaused = false
+    public private(set) var enabledApps: Set<String> = []      // bundleId set
 
-    private let pollingInterval: TimeInterval = 5.0
+    private var pollingInterval: TimeInterval = 1.0
 
-    public init(diffEngine: DiffEngine, outputPrinter: OutputPrinter) {
-        self.diffEngine = diffEngine
-        self.outputPrinter = outputPrinter
-    }
+    public init() {}
 
     public func updateMonitoredApps(_ apps: [MonitoredApp]) {
         let currentBundleIds = Set(apps.map(\.bundleId))
@@ -31,6 +29,28 @@ public final class AccessibilityManager {
         }
     }
 
+    public func setEnabled(bundleId: String, enabled: Bool) {
+        if enabled {
+            enabledApps.insert(bundleId)
+            if !isPaused && categories[bundleId] != nil {
+                startPolling(bundleId: bundleId)
+            }
+        } else {
+            enabledApps.remove(bundleId)
+            pollingTimers[bundleId]?.invalidate()
+            pollingTimers.removeValue(forKey: bundleId)
+        }
+    }
+
+    public func setPollingInterval(_ interval: TimeInterval) {
+        pollingInterval = interval
+        // Restart all active timers with the new interval
+        let activeIds = Array(pollingTimers.keys)
+        for bundleId in activeIds {
+            startPolling(bundleId: bundleId)
+        }
+    }
+
     public func pause() {
         isPaused = true
         for (_, timer) in pollingTimers {
@@ -41,7 +61,7 @@ public final class AccessibilityManager {
 
     public func resume() {
         isPaused = false
-        for (bundleId, _) in categories {
+        for bundleId in categories.keys where enabledApps.contains(bundleId) {
             startPolling(bundleId: bundleId)
         }
     }
@@ -53,6 +73,7 @@ public final class AccessibilityManager {
         pids[app.bundleId] = app.pid
         categories[app.bundleId] = category
         appNames[app.bundleId] = app.name
+        enabledApps.insert(app.bundleId)
 
         // Only Electron apps need AXManualAccessibility enabled
         if category == .electron {
@@ -74,6 +95,8 @@ public final class AccessibilityManager {
         categories.removeValue(forKey: bundleId)
         appNames.removeValue(forKey: bundleId)
         pids.removeValue(forKey: bundleId)
+        enabledApps.remove(bundleId)
+        lastHashes.removeValue(forKey: bundleId)
         print("[FlexDaemon] Detached from \(bundleId)")
     }
 
@@ -89,38 +112,36 @@ public final class AccessibilityManager {
 
     private func extract(bundleId: String) {
         guard !isPaused,
+              enabledApps.contains(bundleId),
               let category = categories[bundleId],
               let pid = pids[bundleId],
               let appName = appNames[bundleId] else { return }
 
-        let items: [ExtractedItem]
+        let content: String
 
         switch category {
         case .chromium:
             if let tab = ChromiumHelper.extractActiveTab(appName: appName) {
-                items = [ExtractedItem(text: tab.text, contextId: bundleId, context: "\(tab.title) — \(tab.url)")]
+                content = "\(tab.title)\n\(tab.url)\n\(tab.text)"
             } else {
-                items = []
+                return
             }
         case .electron, .safari, .generic:
-            let windowTitle = AXTreeHelper.windowTitle(pid: pid) ?? appName
             let tree = AXTreeHelper.getTextTree(pid: pid)
-            if tree.isEmpty {
-                items = []
-            } else {
-                items = [ExtractedItem(text: tree, contextId: bundleId, context: windowTitle)]
-            }
+            if tree.isEmpty { return }
+            content = tree
         }
 
-        if items.isEmpty {
-            print("[FlexDaemon] No items from \(bundleId)")
-            return
-        }
+        let hash = SHA256.hash(data: Data(content.utf8))
+        let short = hash.prefix(8).map { String(format: "%02x", $0) }.joined()
 
-        print("[FlexDaemon] Got \(items.count) item(s) from \(bundleId)")
-        for item in items {
-            guard !item.text.isEmpty else { continue }
-            outputPrinter.printCapture(item: item, source: bundleId, changeType: .new)
+        if let previousHash = lastHashes[bundleId] {
+            if short == previousHash { return }
+            lastHashes[bundleId] = short
+            print("[FlexDaemon] Content changed: \(appName) (hash: \(short)...)")
+        } else {
+            lastHashes[bundleId] = short
+            print("[FlexDaemon] Initial capture: \(appName) (hash: \(short)...)")
         }
     }
 }
