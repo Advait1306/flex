@@ -58,7 +58,10 @@ The triage agent will use the context to decide whether to update an existing to
 IMPORTANT:
 - Extract items ONLY from TRIGGER TEXT, not from document context
 - Include relevant context from the document when the trigger elaborates on something
-- Do NOT invent or expand on what the user said"""
+- Do NOT invent or expand on what the user said
+- Preserve the user's intent in the item text — keep action verbs and intent phrases like "need to", "should", "want to", etc. Do NOT reduce items to bare noun phrases that lose the original meaning.
+  - CORRECT: "need to get pricing page updated before launch"
+  - WRONG: "pricing page updated before launch" (reads as a completed statement, not a task)"""
 
 
 def _extract_triage_items(
