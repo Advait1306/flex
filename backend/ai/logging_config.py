@@ -48,7 +48,6 @@ class AgentLog:
     what we explicitly write to it - agent actions, tool calls, and results.
     """
 
-    _instance: "AgentLog | None" = None
     _file: Any = None
     _path: Path | None = None
 
