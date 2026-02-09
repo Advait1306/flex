@@ -24,10 +24,27 @@ Classification happens in `AppClassifier.classify(bundleId:)` which checks the b
 
 ### AX Tree Extraction (`AXTreeHelper`)
 
-Walks all windows of a process and produces a YAML-like indented text tree. Filters elements by role:
+Walks all windows of a process and produces a YAML-like indented text tree. The walker recurses through every element but only emits output for specific roles:
 
-- **Text roles** (emitted as content): `AXStaticText`, `AXTextField`, `AXTextArea`, `AXLink`, `AXHeading`, `AXCell`
-- **Context roles** (emitted as headers if named): `AXGroup`, `AXList`, `AXScrollArea`, `AXWebArea`
+**Text roles** — emitted as content (`- text here`):
+
+| Role | Typical source |
+|------|---------------|
+| `AXStaticText` | Labels, paragraphs, inline text |
+| `AXTextField` | Single-line text inputs |
+| `AXTextArea` | Multi-line text inputs (e.g. compose box) |
+| `AXLink` | Hyperlinks |
+| `AXHeading` | Section headings |
+| `AXCell` | Table/grid cells |
+| `AXGenericElement` | Catch-all used by Catalyst apps (e.g. WhatsApp chat messages) |
+| `AXButton` | Buttons — often carry useful text in Catalyst apps (e.g. WhatsApp chat list items) |
+
+**Context roles** — emitted as section headers (`name:`) if they have a non-empty title or description:
+`AXGroup`, `AXList`, `AXScrollArea`, `AXWebArea`
+
+For text roles, the value is chosen with this priority: `value` > `title` > `description`. Empty/whitespace-only strings are skipped.
+
+**Raw mode** (`--raw`): dumps every element in the tree with its role and all attributes. Useful for debugging when an app's content isn't showing up — check what roles it uses and whether they're in the text/context sets above.
 
 ### Chromium AppleScript Extraction (`ChromiumHelper`)
 
@@ -42,7 +59,7 @@ Uses delimiter-based output parsing (`<<<DELIM>>>`, `<<<FIELD>>>`, `<<<TAB>>>`) 
 
 ```bash
 # Build and run
-./daemon.sh --tree <AppName> [--all-tabs]
+./daemon.sh --tree <AppName> [--all-tabs] [--raw]
 ```
 
 ### Examples
@@ -63,6 +80,9 @@ Uses delimiter-based output parsing (`<<<DELIM>>>`, `<<<FIELD>>>`, `<<<TAB>>>`) 
 # Generic — AX tree best effort
 ./daemon.sh --tree Finder
 ./daemon.sh --tree Dia
+
+# Debug — dump raw AX tree with all roles and attributes
+./daemon.sh --tree WhatsApp --raw
 ```
 
 The CLI auto-detects the app category from its bundle ID and prints it in the header:

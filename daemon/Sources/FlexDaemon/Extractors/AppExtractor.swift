@@ -30,6 +30,7 @@ public enum AppClassifier {
         "com.hnc.Discord",
         "com.figma.Desktop",
         "notion.id",
+        "com.todesktop.230313mzl4w4u92",  // Cursor
     ]
 
     private static let chromiumBundleIds: Set<String> = [
@@ -126,6 +127,7 @@ public enum AXTreeHelper {
     private static let textRoles: Set<String> = [
         "AXStaticText", "AXTextField", "AXTextArea",
         "AXLink", "AXHeading", "AXCell",
+        "AXGenericElement", "AXButton",
     ]
 
     /// Roles that provide structural context (include if they have a meaningful name)
@@ -166,6 +168,43 @@ public enum AXTreeHelper {
             }
         }
         return nil
+    }
+
+    /// Dump the raw AX tree with all roles and attributes (for debugging).
+    public static func getRawTree(pid: pid_t) -> String {
+        let appRef = AXUIElementCreateApplication(pid)
+        let windows = getAllWindows(appRef)
+        guard !windows.isEmpty else { return "" }
+
+        var lines: [String] = []
+        for (i, window) in windows.enumerated() {
+            let title = getString(window, kAXTitleAttribute) ?? "Window \(i + 1)"
+            if i > 0 { lines.append("") }
+            lines.append("[\(title)]:")
+            walkRawTree(window, into: &lines, depth: 1, maxDepth: 50)
+        }
+        return lines.joined(separator: "\n")
+    }
+
+    private static func walkRawTree(_ element: AXUIElement, into lines: inout [String], depth: Int, maxDepth: Int) {
+        guard depth < maxDepth else { return }
+
+        let role = getString(element, kAXRoleAttribute) ?? "?"
+        let title = getString(element, kAXTitleAttribute)
+        let value = getString(element, kAXValueAttribute)
+        let desc = getString(element, kAXDescriptionAttribute)
+
+        let indent = String(repeating: "  ", count: depth)
+        var parts = [role]
+        if let t = title { parts.append("title=\"\(t.prefix(80))\"") }
+        if let v = value { parts.append("value=\"\(v.prefix(80))\"") }
+        if let d = desc { parts.append("desc=\"\(d.prefix(80))\"") }
+        lines.append("\(indent)\(parts.joined(separator: " | "))")
+
+        let children = getChildren(element)
+        for child in children {
+            walkRawTree(child, into: &lines, depth: depth + 1, maxDepth: maxDepth)
+        }
     }
 
     // MARK: - Private

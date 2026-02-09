@@ -29,10 +29,19 @@ if let treeIdx = CommandLine.arguments.firstIndex(of: "--tree") {
     }
     let appName = CommandLine.arguments[treeIdx + 1]
     let allTabs = CommandLine.arguments.contains("--all-tabs")
+    let rawMode = CommandLine.arguments.contains("--raw")
 
-    // Find the app by name (case-insensitive)
+    // Strip non-printable / Unicode control characters for comparison
+    func normalize(_ s: String) -> String {
+        s.unicodeScalars.filter { !$0.properties.isDefaultIgnorableCodePoint && $0.properties.isXIDContinue || $0 == " " }
+            .map { String($0) }.joined().lowercased()
+    }
+
+    // Find the app by name (case-insensitive, ignoring invisible Unicode chars)
+    let needle = normalize(appName)
     guard let runningApp = NSWorkspace.shared.runningApplications.first(where: {
-        $0.localizedName?.lowercased() == appName.lowercased()
+        guard let name = $0.localizedName else { return false }
+        return normalize(name) == needle
     }) else {
         print("App '\(appName)' not found. Running apps:")
         let apps = NSWorkspace.shared.runningApplications
@@ -56,6 +65,23 @@ if let treeIdx = CommandLine.arguments.firstIndex(of: "--tree") {
     }
     print("App: \(runningApp.localizedName ?? appName) (pid \(pid), \(bundleId), \(category.rawValue))")
     print("Method: \(method)")
+
+    // --raw: dump full AX tree with all roles (for debugging)
+    if rawMode {
+        if category == .electron {
+            let axRef = AXUIElementCreateApplication(pid)
+            AXUIElementSetAttributeValue(axRef, "AXManualAccessibility" as CFString, kCFBooleanTrue)
+            Thread.sleep(forTimeInterval: 0.5)
+        }
+        print(String(repeating: "─", count: 60))
+        let raw = AXTreeHelper.getRawTree(pid: pid)
+        if raw.isEmpty {
+            print("(no AX tree found)")
+        } else {
+            print(raw)
+        }
+        exit(0)
+    }
 
     switch category {
     case .electron:
