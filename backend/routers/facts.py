@@ -1,6 +1,6 @@
 from fastapi import APIRouter, Depends
 
-from ai.logging_config import get_logger
+from logging_config import get_logger
 from auth import verify_user
 from store import list_facts
 

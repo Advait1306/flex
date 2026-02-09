@@ -33,3 +33,4 @@ storage/
 
 # Logs
 backend/logs/
+logs/

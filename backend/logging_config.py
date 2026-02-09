@@ -4,7 +4,7 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any
 
-LOGS_DIR = Path(__file__).parent.parent / "logs"
+LOGS_DIR = Path(__file__).parent / "logs"
 LOGS_DIR.mkdir(parents=True, exist_ok=True)
 
 _console_handler: logging.StreamHandler | None = None

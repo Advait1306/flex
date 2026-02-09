@@ -1,4 +1,4 @@
-from ai.logging_config import get_logger
+from logging_config import get_logger
 from db_models import FreewriteDocument
 
 log = get_logger("store.freewrite")

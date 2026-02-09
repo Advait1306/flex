@@ -7,7 +7,7 @@ from langchain_core.messages import AIMessage, HumanMessage, SystemMessage, Tool
 from langchain_core.tools import tool
 
 from ..config import get_llm
-from ..logging_config import AgentLog, get_logger
+from logging_config import AgentLog, get_logger
 from models import FactItem, TriagePayload
 from store import (
     FactSearchResult,

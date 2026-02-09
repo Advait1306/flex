@@ -59,6 +59,7 @@ def generate_fixtures():
             payload = {
                 "title": todo["title"],
                 "status": todo["status"],
+                "user_id": 0,
             }
             if todo.get("description"):
                 payload["description"] = todo["description"]
@@ -83,6 +84,7 @@ def generate_fixtures():
             payload = {
                 "fact": fact["fact"],
                 "category": fact["category"],
+                "user_id": 0,
             }
             if fact.get("tags"):
                 payload["tags"] = fact["tags"]
@@ -138,6 +140,11 @@ def _create_collections(client):
             lowercase=True,
         ),
     )
+    client.create_payload_index(
+        collection_name=TODOS_EVAL_COLLECTION,
+        field_name="user_id",
+        field_schema="integer",
+    )
 
     # facts_eval (mirrors store/facts.py:37-64)
     client.create_collection(
@@ -163,6 +170,11 @@ def _create_collections(client):
         collection_name=FACTS_EVAL_COLLECTION,
         field_name="category",
         field_schema="keyword",
+    )
+    client.create_payload_index(
+        collection_name=FACTS_EVAL_COLLECTION,
+        field_name="user_id",
+        field_schema="integer",
     )
 
 

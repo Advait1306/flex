@@ -7,9 +7,9 @@ import json
 import logging
 import os
 
-from ai import run_freewrite_processor_agent
+from ai.agents.freewrite_processor_agent import run_freewrite_processor_agent
 from store import list_todos, delete_todo
-from ai.logging_config import setup_logging, get_logger
+from logging_config import setup_logging, get_logger
 
 log = get_logger("cli")
 

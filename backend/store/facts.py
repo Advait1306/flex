@@ -15,7 +15,7 @@ from qdrant_client.models import (
     VectorParams,
 )
 
-from ai.logging_config import get_logger
+from logging_config import get_logger
 from models import FactItem
 
 from .embeddings import get_embedding, get_embeddings

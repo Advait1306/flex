@@ -2,7 +2,7 @@ import asyncio
 from dataclasses import dataclass
 
 from .agents.freewrite_processor_agent import run_freewrite_processor_agent
-from .logging_config import get_logger
+from logging_config import get_logger
 
 log = get_logger("queue_manager")
 

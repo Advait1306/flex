@@ -3,7 +3,7 @@ from typing import Any, List
 from fastapi import APIRouter, Depends
 from pydantic import BaseModel
 
-from ai.logging_config import get_logger
+from logging_config import get_logger
 from ai.queue_manager import get_queue_manager
 from auth import verify_user
 from store import load_freewrite, save_freewrite

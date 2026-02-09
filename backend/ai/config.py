@@ -4,7 +4,7 @@ from dotenv import load_dotenv
 from langchain_openai import ChatOpenAI
 from pydantic import SecretStr
 
-from .logging_config import get_logger
+from logging_config import get_logger
 
 load_dotenv()
 

@@ -2,7 +2,7 @@ import os
 
 from qdrant_client import QdrantClient
 
-from ai.logging_config import get_logger
+from logging_config import get_logger
 
 log = get_logger("storage.qdrant")
 

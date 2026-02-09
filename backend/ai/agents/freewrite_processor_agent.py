@@ -6,7 +6,7 @@ from langchain_core.messages import HumanMessage, SystemMessage
 from pydantic import BaseModel, Field
 
 from ..config import get_llm
-from ..logging_config import AgentLog, get_logger
+from logging_config import AgentLog, get_logger
 from models import TriagePayload
 from .triage_agent import triage_agent
 

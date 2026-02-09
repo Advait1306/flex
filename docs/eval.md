@@ -7,11 +7,11 @@ The eval system tests the AI pipeline components against predefined scenarios wi
 ## Running
 
 ```bash
-cd backend
-uv run python -m evals.run                           # Run all components (3 runs each)
-uv run python -m evals.run --component triage        # Run one component
-uv run python -m evals.run --runs 5                  # Override runs per scenario
-uv run python -m evals.run --generate-fixtures       # Regenerate fixture embeddings
+./eval.sh                                    # Run all components (3 runs each)
+./eval.sh --component triage                 # Run one component
+./eval.sh --runs 5                           # Override runs per scenario
+./eval.sh --generate-fixtures                # Regenerate fixture embeddings only
+./eval.sh --generate-fixtures --component triage  # Regenerate then run specific eval
 ```
 
 ## Components

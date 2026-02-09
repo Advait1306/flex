@@ -1,25 +1,6 @@
 import argparse
-import sys
 
 from tabulate import tabulate
-
-# Break circular import: store -> ai.logging_config -> ai/__init__ -> ai.agents -> store
-# Solution: stub the ai package so ai.logging_config can be imported without running
-# ai/__init__.py (which eagerly imports agents that depend on store).
-# Once store is loaded, we let the real ai/__init__ run.
-import types as _types
-from pathlib import Path as _Path
-
-_ai_pkg = _types.ModuleType("ai")
-_ai_pkg.__path__ = [str(_Path(__file__).resolve().parent.parent / "ai")]
-_ai_pkg.__package__ = "ai"
-sys.modules["ai"] = _ai_pkg
-
-import store  # noqa: F401 - store loads fully (ai.logging_config loads under the stub)
-
-# Replace stub with real package — store is in sys.modules so the cycle is broken
-del sys.modules["ai"]
-import ai  # noqa: F401
 
 from ai.config import set_app_name
 set_app_name("Flex-Eval")

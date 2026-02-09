@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
 
-from ai.logging_config import get_logger
+from logging_config import get_logger
 from auth import verify_user
 from store import create_todo as store_create_todo, update_todo as store_update_todo, delete_todo, list_todos, load_todo
 
