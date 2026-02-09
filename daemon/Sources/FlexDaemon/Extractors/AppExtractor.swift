@@ -13,10 +13,110 @@ public struct ExtractedItem {
     }
 }
 
-protocol AppExtractor {
-    var bundleId: String { get }
-    var processName: String { get }
-    func extractContent(pid: pid_t) -> [ExtractedItem]
+// MARK: - App classification
+
+public enum AppCategory: String {
+    case electron
+    case safari
+    case chromium
+    case generic
+}
+
+public enum AppClassifier {
+    private static let electronBundleIds: Set<String> = [
+        "com.tinyspeck.slackmacgap",
+        "com.linear",
+        "com.microsoft.VSCode",
+        "com.hnc.Discord",
+        "com.figma.Desktop",
+        "notion.id",
+    ]
+
+    private static let chromiumBundleIds: Set<String> = [
+        "com.google.Chrome",
+        "com.brave.Browser",
+        "com.microsoft.edgemac",
+        "company.thebrowser.Browser",  // Arc
+        "com.vivaldi.Vivaldi",
+        "com.operasoftware.Opera",
+    ]
+
+    private static let safariBundleId = "com.apple.Safari"
+
+    public static func classify(bundleId: String) -> AppCategory {
+        if electronBundleIds.contains(bundleId) { return .electron }
+        if chromiumBundleIds.contains(bundleId) { return .chromium }
+        if bundleId == safariBundleId { return .safari }
+        return .generic
+    }
+}
+
+// MARK: - Chromium AppleScript extraction
+
+public enum ChromiumHelper {
+    public struct TabContent {
+        public let title: String
+        public let url: String
+        public let text: String
+    }
+
+    /// Extract the active tab from a Chromium browser via AppleScript.
+    public static func extractActiveTab(appName: String) -> TabContent? {
+        let script = """
+        tell application "\(appName)"
+            set t to active tab of front window
+            set tabTitle to title of t
+            set tabURL to URL of t
+            set tabText to execute t javascript "document.body.innerText"
+            return tabTitle & "<<<DELIM>>>" & tabURL & "<<<DELIM>>>" & tabText
+        end tell
+        """
+        guard let result = runAppleScript(script) else { return nil }
+        let parts = result.components(separatedBy: "<<<DELIM>>>")
+        guard parts.count >= 3 else { return nil }
+        return TabContent(title: parts[0], url: parts[1], text: parts.dropFirst(2).joined(separator: "<<<DELIM>>>"))
+    }
+
+    /// Extract all tabs from a Chromium browser via AppleScript.
+    public static func extractAllTabs(appName: String) -> [TabContent] {
+        let script = """
+        tell application "\(appName)"
+            set output to ""
+            repeat with w in windows
+                repeat with t in tabs of w
+                    set tabTitle to title of t
+                    set tabURL to URL of t
+                    set tabText to execute t javascript "document.body.innerText"
+                    set output to output & tabTitle & "<<<FIELD>>>" & tabURL & "<<<FIELD>>>" & tabText & "<<<TAB>>>"
+                end repeat
+            end repeat
+            return output
+        end tell
+        """
+        guard let result = runAppleScript(script) else { return [] }
+        var tabs: [TabContent] = []
+        for tabChunk in result.components(separatedBy: "<<<TAB>>>") {
+            let fields = tabChunk.components(separatedBy: "<<<FIELD>>>")
+            guard fields.count >= 3 else { continue }
+            let title = fields[0]
+            let url = fields[1]
+            let text = fields.dropFirst(2).joined(separator: "<<<FIELD>>>")
+            guard !title.isEmpty || !url.isEmpty else { continue }
+            tabs.append(TabContent(title: title, url: url, text: text))
+        }
+        return tabs
+    }
+
+    private static func runAppleScript(_ source: String) -> String? {
+        let script = NSAppleScript(source: source)
+        var error: NSDictionary?
+        let result = script?.executeAndReturnError(&error)
+        if let error = error {
+            print("[ChromiumHelper] AppleScript error: \(error)")
+            return nil
+        }
+        return result?.stringValue
+    }
 }
 
 // MARK: - AX tree helper

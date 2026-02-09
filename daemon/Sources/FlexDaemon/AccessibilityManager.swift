@@ -4,7 +4,8 @@ public final class AccessibilityManager {
     private let diffEngine: DiffEngine
     private let outputPrinter: OutputPrinter
     private var pollingTimers: [String: Timer] = [:]           // bundleId -> timer
-    private var extractors: [String: AppExtractor] = [:]       // bundleId -> extractor
+    private var categories: [String: AppCategory] = [:]        // bundleId -> category
+    private var appNames: [String: String] = [:]               // bundleId -> display name
     private var pids: [String: pid_t] = [:]                    // bundleId -> pid
     private var isPaused = false
 
@@ -17,7 +18,7 @@ public final class AccessibilityManager {
 
     public func updateMonitoredApps(_ apps: [MonitoredApp]) {
         let currentBundleIds = Set(apps.map(\.bundleId))
-        let monitoredBundleIds = Set(extractors.keys)
+        let monitoredBundleIds = Set(categories.keys)
 
         // Detach apps that are no longer running
         for bundleId in monitoredBundleIds.subtracting(currentBundleIds) {
@@ -40,7 +41,7 @@ public final class AccessibilityManager {
 
     public func resume() {
         isPaused = false
-        for (bundleId, _) in extractors {
+        for (bundleId, _) in categories {
             startPolling(bundleId: bundleId)
         }
     }
@@ -48,35 +49,30 @@ public final class AccessibilityManager {
     // MARK: - Private
 
     private func attach(app: MonitoredApp) {
+        let category = AppClassifier.classify(bundleId: app.bundleId)
         pids[app.bundleId] = app.pid
+        categories[app.bundleId] = category
+        appNames[app.bundleId] = app.name
 
-        // Enable Chromium/Electron AX tree — makes all elements inspectable
-        let axRef = AXUIElementCreateApplication(app.pid)
-        AXUIElementSetAttributeValue(axRef, "AXManualAccessibility" as CFString, kCFBooleanTrue)
-
-        let extractor: AppExtractor
-        switch app.bundleId {
-        case "com.tinyspeck.slackmacgap":
-            extractor = SlackExtractor()
-        case "com.linear":
-            extractor = LinearExtractor()
-        default:
-            return
+        // Only Electron apps need AXManualAccessibility enabled
+        if category == .electron {
+            let axRef = AXUIElementCreateApplication(app.pid)
+            AXUIElementSetAttributeValue(axRef, "AXManualAccessibility" as CFString, kCFBooleanTrue)
         }
-        extractors[app.bundleId] = extractor
 
-        // Start polling (AX extraction every 5s)
+        // Start polling
         if !isPaused {
             startPolling(bundleId: app.bundleId)
         }
 
-        print("[FlexDaemon] Attached to \(app.name) (pid \(app.pid))")
+        print("[FlexDaemon] Attached to \(app.name) (pid \(app.pid), \(category.rawValue))")
     }
 
     private func detach(bundleId: String) {
         pollingTimers[bundleId]?.invalidate()
         pollingTimers.removeValue(forKey: bundleId)
-        extractors.removeValue(forKey: bundleId)
+        categories.removeValue(forKey: bundleId)
+        appNames.removeValue(forKey: bundleId)
         pids.removeValue(forKey: bundleId)
         print("[FlexDaemon] Detached from \(bundleId)")
     }
@@ -93,10 +89,28 @@ public final class AccessibilityManager {
 
     private func extract(bundleId: String) {
         guard !isPaused,
-              let extractor = extractors[bundleId],
-              let pid = pids[bundleId] else { return }
+              let category = categories[bundleId],
+              let pid = pids[bundleId],
+              let appName = appNames[bundleId] else { return }
 
-        let items = extractor.extractContent(pid: pid)
+        let items: [ExtractedItem]
+
+        switch category {
+        case .chromium:
+            if let tab = ChromiumHelper.extractActiveTab(appName: appName) {
+                items = [ExtractedItem(text: tab.text, contextId: bundleId, context: "\(tab.title) — \(tab.url)")]
+            } else {
+                items = []
+            }
+        case .electron, .safari, .generic:
+            let windowTitle = AXTreeHelper.windowTitle(pid: pid) ?? appName
+            let tree = AXTreeHelper.getTextTree(pid: pid)
+            if tree.isEmpty {
+                items = []
+            } else {
+                items = [ExtractedItem(text: tree, contextId: bundleId, context: windowTitle)]
+            }
+        }
 
         if items.isEmpty {
             print("[FlexDaemon] No items from \(bundleId)")
