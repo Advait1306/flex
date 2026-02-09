@@ -8,6 +8,8 @@ __pycache__/
 .next/
 dist/
 build/
+daemon/.build/
+daemon/ax-dumps/
 
 # Environment
 .env
@@ -34,3 +36,6 @@ storage/
 # Logs
 backend/logs/
 logs/
+
+# Worktrees
+.worktrees/
