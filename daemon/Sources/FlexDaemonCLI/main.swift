@@ -1,5 +1,6 @@
 import AppKit
 import AXSwift
+import CryptoKit
 import FlexDaemon
 
 let app = NSApplication.shared
@@ -83,6 +84,8 @@ if let treeIdx = CommandLine.arguments.firstIndex(of: "--tree") {
         exit(0)
     }
 
+    var output = ""
+
     switch category {
     case .electron:
         // Enable AX tree for Electron apps
@@ -94,11 +97,11 @@ if let treeIdx = CommandLine.arguments.firstIndex(of: "--tree") {
         print("Window: \(title)")
         print(String(repeating: "─", count: 60))
 
-        let tree = AXTreeHelper.getTextTree(pid: pid)
-        if tree.isEmpty {
+        output = AXTreeHelper.getTextTree(pid: pid)
+        if output.isEmpty {
             print("(no text content found)")
         } else {
-            print(tree)
+            print(output)
         }
 
     case .safari, .generic:
@@ -106,11 +109,11 @@ if let treeIdx = CommandLine.arguments.firstIndex(of: "--tree") {
         print("Window: \(title)")
         print(String(repeating: "─", count: 60))
 
-        let tree = AXTreeHelper.getTextTree(pid: pid)
-        if tree.isEmpty {
+        output = AXTreeHelper.getTextTree(pid: pid)
+        if output.isEmpty {
             print("(no text content found)")
         } else {
-            print(tree)
+            print(output)
         }
 
     case .chromium:
@@ -119,6 +122,7 @@ if let treeIdx = CommandLine.arguments.firstIndex(of: "--tree") {
             if tabs.isEmpty {
                 print("(no tabs found)")
             } else {
+                var parts: [String] = []
                 for (i, tab) in tabs.enumerated() {
                     if i > 0 { print("") }
                     print("Tab \(i + 1): \(tab.title)")
@@ -128,8 +132,10 @@ if let treeIdx = CommandLine.arguments.firstIndex(of: "--tree") {
                         print("(no text content)")
                     } else {
                         print(tab.text)
+                        parts.append(tab.text)
                     }
                 }
+                output = parts.joined(separator: "\n")
             }
         } else {
             if let tab = ChromiumHelper.extractActiveTab(appName: runningApp.localizedName ?? appName) {
@@ -140,11 +146,19 @@ if let treeIdx = CommandLine.arguments.firstIndex(of: "--tree") {
                     print("(no text content)")
                 } else {
                     print(tab.text)
+                    output = tab.text
                 }
             } else {
                 print("(could not extract active tab — is the browser open?)")
             }
         }
+    }
+
+    if !output.isEmpty {
+        let hash = SHA256.hash(data: Data(output.utf8))
+        let short = hash.prefix(8).map { String(format: "%02x", $0) }.joined()
+        print(String(repeating: "─", count: 60))
+        print("Hash: \(short)...")
     }
 
     exit(0)
