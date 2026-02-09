@@ -37,6 +37,11 @@ When running both, use `Ctrl+B D` to detach from tmux.
 - Backend: http://localhost:8000
 
 
+## Docs
+
+- [Architecture](docs/architecture.md) — system design, data flow, and storage layout
+- [Evals](docs/eval.md) — AI pipeline evaluation framework
+
 ## API Endpoints
 
 | Method | Endpoint            | Description                      |
