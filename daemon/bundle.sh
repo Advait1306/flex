@@ -35,13 +35,13 @@ cat > "$APP_BUNDLE/Contents/Info.plist" << 'PLIST'
 </plist>
 PLIST
 
-# Copy .env into the bundle if it exists
-if [ -f "$DIR/.env" ]; then
-    cp "$DIR/.env" "$APP_BUNDLE/Contents/MacOS/.env"
-    echo "Copied .env into bundle"
+# Copy .env.prod into the bundle as .env
+if [ -f "$DIR/.env.prod" ]; then
+    cp "$DIR/.env.prod" "$APP_BUNDLE/Contents/MacOS/.env"
+    echo "Copied .env.prod into bundle"
 else
-    echo "Warning: No .env file found at $DIR/.env"
-    echo "Create one with: echo 'BACKEND_URL=http://localhost:8000' > $DIR/.env"
+    echo "Warning: No .env.prod file found at $DIR/.env.prod"
+    echo "Create one with: echo 'BACKEND_URL=http://your-server.com' > $DIR/.env.prod"
 fi
 
 echo "Bundle created: $APP_BUNDLE"
