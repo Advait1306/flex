@@ -3,25 +3,23 @@ import AXSwift
 import CryptoKit
 import FlexDaemon
 
-let app = NSApplication.shared
-app.setActivationPolicy(.accessory)
+DotEnv.load()
 
-guard UIElement.isProcessTrusted(withPrompt: true) else {
-    let alert = NSAlert()
-    alert.messageText = "Accessibility Permission Required"
-    alert.informativeText = "Flex Daemon needs Accessibility access to monitor Slack and Linear. Please grant access in System Settings → Privacy & Security → Accessibility, then relaunch."
-    alert.alertStyle = .critical
-    alert.addButton(withTitle: "Quit")
-    alert.runModal()
-    exit(1)
-}
-
-// --tree <name>: print text tree of a running app and exit
+// --tree <name>: print text tree of a running app and exit (local-only, no login)
 // Usage: ./daemon.sh --tree Slack
 //        ./daemon.sh --tree Safari
 //        ./daemon.sh --tree "Google Chrome"
 //        ./daemon.sh --tree "Google Chrome" --all-tabs
 if let treeIdx = CommandLine.arguments.firstIndex(of: "--tree") {
+    let app = NSApplication.shared
+    app.setActivationPolicy(.accessory)
+
+    guard UIElement.isProcessTrusted(withPrompt: false) else {
+        print("Error: Accessibility permission not granted.")
+        print("Grant access in System Settings → Privacy & Security → Accessibility, then retry.")
+        exit(1)
+    }
+
     guard treeIdx + 1 < CommandLine.arguments.count else {
         print("Usage: daemon --tree <AppName> [--all-tabs]")
         print("Example: daemon --tree Slack")
@@ -164,6 +162,8 @@ if let treeIdx = CommandLine.arguments.firstIndex(of: "--tree") {
     exit(0)
 }
 
+// Normal daemon mode: onboarding → login → accessibility → menu bar
+let app = NSApplication.shared
 let delegate = AppDelegate()
 app.delegate = delegate
 app.run()

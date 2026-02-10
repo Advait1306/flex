@@ -35,6 +35,11 @@ public final class AppMonitor {
                            name: NSWorkspace.didActivateApplicationNotification, object: nil)
     }
 
+    public func stop() {
+        NSWorkspace.shared.notificationCenter.removeObserver(self)
+        runningApps.removeAll()
+    }
+
     public func currentAppNames() -> [String] {
         runningApps.values.map(\.name)
     }

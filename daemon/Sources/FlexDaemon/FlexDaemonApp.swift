@@ -2,11 +2,13 @@ import AppKit
 import AXSwift
 
 public class AppDelegate: NSObject, NSApplicationDelegate {
-    private var statusItem: NSStatusItem!
-    private var appMonitor: AppMonitor!
-    private var accessibilityManager: AccessibilityManager!
+    private var statusItem: NSStatusItem?
+    private var appMonitor: AppMonitor?
+    private var accessibilityManager: AccessibilityManager?
     private var isPaused = false
     private var monitoredApps: [MonitoredApp] = []
+    private var authToken: String?
+    private var coordinator: OnboardingCoordinator?
 
     private static let pollingIntervals: [(label: String, interval: TimeInterval)] = [
         ("1s", 1.0),
@@ -21,27 +23,52 @@ public class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     public func applicationDidFinishLaunching(_ notification: Notification) {
+        coordinator = OnboardingCoordinator()
+        coordinator?.start { [weak self] token in
+            self?.startDaemon(token: token)
+        }
+    }
+
+    public func startDaemon(token: String) {
+        authToken = token
+        coordinator = nil
+
         setupStatusItem()
 
         accessibilityManager = AccessibilityManager()
 
         appMonitor = AppMonitor { [weak self] runningApps in
             self?.monitoredApps = runningApps
-            self?.accessibilityManager.updateMonitoredApps(runningApps)
+            self?.accessibilityManager?.updateMonitoredApps(runningApps)
             self?.rebuildMenu()
         }
-        appMonitor.start()
+        appMonitor?.start()
+    }
+
+    private func stopDaemon() {
+        appMonitor?.stop()
+        appMonitor = nil
+        accessibilityManager?.pause()
+        accessibilityManager = nil
+        monitoredApps = []
+        isPaused = false
+
+        if let item = statusItem {
+            NSStatusBar.system.removeStatusItem(item)
+            statusItem = nil
+        }
     }
 
     private func setupStatusItem() {
         statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.squareLength)
-        if let button = statusItem.button {
+        if let button = statusItem?.button {
             button.image = NSImage(systemSymbolName: "eye", accessibilityDescription: "Flex Daemon")
         }
         rebuildMenu()
     }
 
     private func rebuildMenu() {
+        guard let statusItem = statusItem else { return }
         let menu = NSMenu()
 
         if monitoredApps.isEmpty {
@@ -57,7 +84,7 @@ public class AppDelegate: NSObject, NSApplicationDelegate {
                 let item = NSMenuItem(title: app.name, action: #selector(toggleApp(_:)), keyEquivalent: "")
                 item.target = self
                 item.representedObject = app.bundleId
-                if accessibilityManager.enabledApps.contains(app.bundleId) {
+                if let manager = accessibilityManager, manager.enabledApps.contains(app.bundleId) {
                     item.state = .on
                 } else {
                     item.state = .off
@@ -90,6 +117,10 @@ public class AppDelegate: NSObject, NSApplicationDelegate {
 
         menu.addItem(NSMenuItem.separator())
 
+        let logoutItem = NSMenuItem(title: "Log Out", action: #selector(logOut), keyEquivalent: "")
+        logoutItem.target = self
+        menu.addItem(logoutItem)
+
         let quitItem = NSMenuItem(title: "Quit Flex Daemon", action: #selector(quit), keyEquivalent: "q")
         quitItem.target = self
         menu.addItem(quitItem)
@@ -99,28 +130,40 @@ public class AppDelegate: NSObject, NSApplicationDelegate {
 
     @objc private func toggleApp(_ sender: NSMenuItem) {
         guard let bundleId = sender.representedObject as? String else { return }
-        let isCurrentlyEnabled = accessibilityManager.enabledApps.contains(bundleId)
-        accessibilityManager.setEnabled(bundleId: bundleId, enabled: !isCurrentlyEnabled)
+        guard let manager = accessibilityManager else { return }
+        let isCurrentlyEnabled = manager.enabledApps.contains(bundleId)
+        manager.setEnabled(bundleId: bundleId, enabled: !isCurrentlyEnabled)
         rebuildMenu()
     }
 
     @objc private func setPollingInterval(_ sender: NSMenuItem) {
         guard let interval = sender.representedObject as? TimeInterval else { return }
         selectedPollingInterval = interval
-        accessibilityManager.setPollingInterval(interval)
+        accessibilityManager?.setPollingInterval(interval)
         rebuildMenu()
     }
 
     @objc private func togglePause() {
         isPaused.toggle()
         if isPaused {
-            accessibilityManager.pause()
+            accessibilityManager?.pause()
             print("[FlexDaemon] Monitoring paused")
         } else {
-            accessibilityManager.resume()
+            accessibilityManager?.resume()
             print("[FlexDaemon] Monitoring resumed")
         }
         rebuildMenu()
+    }
+
+    @objc private func logOut() {
+        KeychainHelper.deleteToken()
+        authToken = nil
+        stopDaemon()
+
+        coordinator = OnboardingCoordinator()
+        coordinator?.start { [weak self] token in
+            self?.startDaemon(token: token)
+        }
     }
 
     @objc private func quit() {
