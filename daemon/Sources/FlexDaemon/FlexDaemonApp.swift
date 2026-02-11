@@ -36,6 +36,23 @@ public class AppDelegate: NSObject, NSApplicationDelegate {
         setupStatusItem()
 
         accessibilityManager = AccessibilityManager()
+        accessibilityManager?.onContentChanged = { [weak self] appName, bundleId, content, category, hash in
+            guard let token = self?.authToken else { return }
+            Task {
+                do {
+                    let payload = BackendClient.SnapshotPayload(
+                        app_name: appName,
+                        bundle_id: bundleId,
+                        app_category: category.rawValue,
+                        content: content,
+                        content_hash: hash
+                    )
+                    try await BackendClient.sendSnapshot(payload, token: token)
+                } catch {
+                    print("[FlexDaemon] Failed to send snapshot for \(appName): \(error)")
+                }
+            }
+        }
 
         appMonitor = AppMonitor { [weak self] runningApps in
             self?.monitoredApps = runningApps

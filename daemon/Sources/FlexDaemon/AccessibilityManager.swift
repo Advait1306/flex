@@ -12,6 +12,9 @@ public final class AccessibilityManager {
 
     private var pollingInterval: TimeInterval = 1.0
 
+    /// Called when content changes for an app: (appName, bundleId, content, category, contentHash)
+    public var onContentChanged: ((String, String, String, AppCategory, String) -> Void)?
+
     public init() {}
 
     public func updateMonitoredApps(_ apps: [MonitoredApp]) {
@@ -139,9 +142,11 @@ public final class AccessibilityManager {
             if short == previousHash { return }
             lastHashes[bundleId] = short
             print("[FlexDaemon] Content changed: \(appName) (hash: \(short)...)")
+            onContentChanged?(appName, bundleId, content, category, short)
         } else {
             lastHashes[bundleId] = short
             print("[FlexDaemon] Initial capture: \(appName) (hash: \(short)...)")
+            onContentChanged?(appName, bundleId, content, category, short)
         }
     }
 }
