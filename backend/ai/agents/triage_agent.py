@@ -5,6 +5,7 @@ from typing import Literal
 
 from langchain_core.messages import AIMessage, HumanMessage, SystemMessage, ToolMessage
 from langchain_core.tools import tool
+from langsmith import traceable
 
 from ..config import get_llm
 from logging_config import AgentLog, get_logger
@@ -333,6 +334,7 @@ For update_todo:
 MAX_TOOL_CALLS = 5
 
 
+@traceable(name="triage_agent", run_type="chain")
 def triage_agent(item: TriagePayload, *, user_id: int) -> None:
     """Triage a single item using tool-calling to search for existing todos."""
     log.info(f"Triaging item: {item.text}")

@@ -3,6 +3,7 @@ import uuid
 from typing import Literal
 
 from langchain_core.messages import HumanMessage, SystemMessage
+from langsmith import traceable
 from pydantic import BaseModel, Field
 
 from ..config import get_llm
@@ -64,6 +65,7 @@ IMPORTANT:
   - WRONG: "pricing page updated before launch" (reads as a completed statement, not a task)"""
 
 
+@traceable(name="extract_triage_items", run_type="chain")
 def _extract_triage_items(
     trigger_text: str, document_context: str
 ) -> list[TriagePayload]:
@@ -104,6 +106,7 @@ def _extract_triage_items(
     return result.items
 
 
+@traceable(name="freewrite_processor", run_type="chain")
 async def run_freewrite_processor_agent(
     trigger: str, document_id: str | None = None, document_context: str = "", *, user_id: int
 ) -> None:
