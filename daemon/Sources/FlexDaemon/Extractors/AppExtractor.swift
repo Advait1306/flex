@@ -208,13 +208,6 @@ public enum AXTreeHelper {
 
     // MARK: - Private
 
-    private static func getFocusedWindow(_ appRef: AXUIElement) -> AXUIElement? {
-        var value: CFTypeRef?
-        let err = AXUIElementCopyAttributeValue(appRef, kAXFocusedWindowAttribute as CFString, &value)
-        guard err == .success else { return nil }
-        return (value as! AXUIElement)
-    }
-
     private static func getAllWindows(_ appRef: AXUIElement) -> [AXUIElement] {
         var value: CFTypeRef?
         let err = AXUIElementCopyAttributeValue(appRef, kAXWindowsAttribute as CFString, &value)
