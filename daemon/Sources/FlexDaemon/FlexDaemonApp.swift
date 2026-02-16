@@ -62,9 +62,14 @@ public class AppDelegate: NSObject, NSApplicationDelegate {
         appMonitor?.start()
     }
 
+    public func applicationWillTerminate(_ notification: Notification) {
+        accessibilityManager?.flushState()
+    }
+
     private func stopDaemon() {
         appMonitor?.stop()
         appMonitor = nil
+        accessibilityManager?.flushState()
         accessibilityManager?.pause()
         accessibilityManager = nil
         monitoredApps = []

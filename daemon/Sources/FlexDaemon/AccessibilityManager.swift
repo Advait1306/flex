@@ -6,7 +6,8 @@ public final class AccessibilityManager {
     private var categories: [String: AppCategory] = [:]        // bundleId -> category
     private var appNames: [String: String] = [:]               // bundleId -> display name
     private var pids: [String: pid_t] = [:]                    // bundleId -> pid
-    private var lastHashes: [String: String] = [:]             // bundleId -> hash
+    private var lastHashes: [String: String] = [:]             // bundleId -> full hash (fast path)
+    private let hashStore = HashStore()
     private var isPaused = false
     public private(set) var enabledApps: Set<String> = []      // bundleId set
 
@@ -22,7 +23,9 @@ public final class AccessibilityManager {
     /// Called when content changes for an app: (appName, bundleId, content, category, contentHash)
     public var onContentChanged: ((String, String, String, AppCategory, String) -> Void)?
 
-    public init() {}
+    public init() {
+        hashStore.load()
+    }
 
     public func updateMonitoredApps(_ apps: [MonitoredApp]) {
         let currentBundleIds = Set(apps.map(\.bundleId))
@@ -145,18 +148,25 @@ public final class AccessibilityManager {
             content = tree
         }
 
-        let hash = SHA256.hash(data: Data(content.utf8))
-        let short = hash.prefix(8).map { String(format: "%02x", $0) }.joined()
+        let hashDigest = SHA256.hash(data: Data(content.utf8))
+        let fullHash = hashDigest.map { String(format: "%02x", $0) }.joined()
+        let short = hashDigest.prefix(8).map { String(format: "%02x", $0) }.joined()
 
-        if let previousHash = lastHashes[bundleId] {
-            if short == previousHash { return }
-            lastHashes[bundleId] = short
-            print("[FlexDaemon] Content changed: \(appName) (hash: \(short)...)")
-            onContentChanged?(appName, bundleId, content, category, short)
-        } else {
-            lastHashes[bundleId] = short
-            print("[FlexDaemon] Initial capture: \(appName) (hash: \(short)...)")
-            onContentChanged?(appName, bundleId, content, category, short)
+        // Fast path: same content as last poll for this app — skip without Set lookup
+        if lastHashes[bundleId] == fullHash { return }
+        lastHashes[bundleId] = fullHash
+
+        // Persistent check: skip if this content was ever sent before (survives restarts)
+        if hashStore.checkAndRecord(fullHash) {
+            print("[FlexDaemon] Skipping duplicate: \(appName) (hash: \(short)...)")
+            return
         }
+
+        print("[FlexDaemon] Content changed: \(appName) (hash: \(short)...)")
+        onContentChanged?(appName, bundleId, content, category, short)
+    }
+
+    public func flushState() {
+        hashStore.saveNow()
     }
 }
