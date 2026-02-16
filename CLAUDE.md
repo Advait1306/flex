@@ -2,6 +2,7 @@
 
 - Don't run servers or start processes automatically
 - Never manually edit dependency tracking files (package.json, pyproject.toml, requirements.txt) — always use `npm install <package>` or `uv add <package>` to install dependencies
+- Never commit or push unless explicitly asked — always wait for the user to review code first
 
 ## Working with agent prompts
 
