@@ -89,3 +89,29 @@ groups:
           action: update_todo
           args_contain:
             todo_id: "t4"
+
+      - id: status_change_no_description_mutation
+        item:
+          text: "started working on it"
+          context: "BLR billboard"
+        expect:
+          action: update_todo
+          args_contain:
+            todo_id: "t4"
+            status: "in_progress"
+          args_null:
+            - description
+
+      - id: duplicate_info_no_update
+        item:
+          text: "users can't login with OAuth, 403 error"
+          context: "auth bug"
+        expect:
+          action: do_nothing
+
+      - id: duplicate_info_no_update_waitlist
+        item:
+          text: "build a waitlist page for Felix launch"
+          context: "waitlist for felix"
+        expect:
+          action: do_nothing

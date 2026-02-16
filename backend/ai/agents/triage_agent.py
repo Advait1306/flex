@@ -312,10 +312,11 @@ Without context:
 CRITICAL RULES:
 - When context is provided, prioritize finding the related todo — but still distinguish between status changes, new tasks, and information
 - ALWAYS search_todos AND search_facts before making any action (create_todo, update_todo, save_fact)
-- When the user wants to close/complete/cancel/start a todo, use the `status` parameter — do NOT append status info to the description
+- **STATUS CHANGES ARE STATUS-ONLY**: When the intent is a status change (close, complete, start, cancel), call update_todo with ONLY `status` and `tags`. Do NOT set `description` or `title` — leave them as None. The `status` parameter is the ONLY way to change status. Never put status information in the description field.
 - When the item text contains a NEW ACTION VERB (figure out, set up, build, track, hire, etc.), create a NEW todo — do NOT append it as a note on an existing todo's description
 - Only use update_todo's description for adding pure INFORMATION (details, constraints, context) — never for new actionable work
 - NEVER create a todo that duplicates an existing one (even if the existing one is completed/cancelled) — use do_nothing instead
+- NEVER update a todo with information it already contains — read the existing description from search results and only call update_todo if you have genuinely new details to add. If the todo already has the information, use do_nothing.
 - Do NOT invent tasks beyond what was explicitly mentioned
 - TAGS ARE MANDATORY for every create_todo/update_todo call - always provide 2-5 searchable tags
 
@@ -326,9 +327,10 @@ For create_todo:
 
 For update_todo:
 - todo_id: The ID of the existing todo to update
-- description: Write the COMPLETE new description - preserve ALL existing info and add the new info
+- description: Only set this when you have genuinely NEW information to add. Read the existing description from the search results first — if the information you want to add is already there, use do_nothing instead. When you do update, write the COMPLETE new description (preserve existing + add new).
 - tags: REQUIRED - 2-5 key searchable concepts for this todo
 - NEVER remove existing information unless explicitly asked
+- If the item provides no new information beyond what the todo already contains, use do_nothing — do NOT re-write the same description
 """
 
 MAX_TOOL_CALLS = 5

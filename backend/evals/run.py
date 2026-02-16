@@ -6,9 +6,9 @@ from ai.config import set_app_name
 set_app_name("Flex-Eval")
 
 from .fixtures import generate_fixtures
-from . import eval_freewrite_processor, eval_search, eval_triage_agent
+from . import eval_daemon_processor, eval_freewrite_processor, eval_search, eval_triage_agent
 
-ALL_COMPONENTS = ["freewrite", "search", "triage"]
+ALL_COMPONENTS = ["freewrite", "search", "triage", "daemon"]
 
 
 def print_results(component: str, results: list, runs: int):
@@ -17,6 +17,7 @@ def print_results(component: str, results: list, runs: int):
         "freewrite": "Freewrite Processor",
         "search": "Search",
         "triage": "Triage Agent",
+        "daemon": "Daemon Processor",
     }
     print(f"\n{'=' * 60}")
     print(f"{labels[component]} Eval ({runs} run{'s' if runs != 1 else ''} each)")
@@ -53,6 +54,10 @@ def main():
         help="Number of runs per scenario (default: 3)",
     )
     parser.add_argument(
+        "--scenario",
+        help="Run only scenarios matching this substring (e.g. 'duplicate' or 'status_change')",
+    )
+    parser.add_argument(
         "--generate-fixtures",
         action="store_true",
         help="Regenerate fixture embeddings and exit",
@@ -67,18 +72,23 @@ def main():
 
     if "freewrite" in components:
         print("\nRunning freewrite processor eval...")
-        results = eval_freewrite_processor.run(runs=args.runs)
+        results = eval_freewrite_processor.run(runs=args.runs, scenario_filter=args.scenario)
         print_results("freewrite", results, args.runs)
 
     if "search" in components:
         print("\nRunning search eval...")
-        results = eval_search.run(runs=args.runs)
+        results = eval_search.run(runs=args.runs, scenario_filter=args.scenario)
         print_results("search", results, args.runs)
 
     if "triage" in components:
         print("\nRunning triage agent eval...")
-        results = eval_triage_agent.run(runs=args.runs)
+        results = eval_triage_agent.run(runs=args.runs, scenario_filter=args.scenario)
         print_results("triage", results, args.runs)
+
+    if "daemon" in components:
+        print("\nRunning daemon processor eval...")
+        results = eval_daemon_processor.run(runs=args.runs, scenario_filter=args.scenario)
+        print_results("daemon", results, args.runs)
 
 
 if __name__ == "__main__":
