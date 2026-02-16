@@ -1,6 +1,10 @@
 import argparse
+import logging
 
 from tabulate import tabulate
+
+from logging_config import setup_logging
+setup_logging(level=logging.ERROR)
 
 from ai.config import set_app_name
 set_app_name("Flex-Eval")
