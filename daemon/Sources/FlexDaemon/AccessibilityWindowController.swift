@@ -1,3 +1,7 @@
+// Uses AppKit directly (not SwiftUI) because the daemon runs on an NSApplication
+// lifecycle with no main window. Could wrap in NSHostingController, but these are
+// simple one-off onboarding screens where SwiftUI adds a dependency for minimal benefit.
+
 import AppKit
 import AXSwift
 
