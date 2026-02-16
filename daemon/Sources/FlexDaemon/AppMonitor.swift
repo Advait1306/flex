@@ -31,17 +31,11 @@ public final class AppMonitor {
                            name: NSWorkspace.didLaunchApplicationNotification, object: nil)
         center.addObserver(self, selector: #selector(appTerminated(_:)),
                            name: NSWorkspace.didTerminateApplicationNotification, object: nil)
-        center.addObserver(self, selector: #selector(appActivated(_:)),
-                           name: NSWorkspace.didActivateApplicationNotification, object: nil)
-    }
+}
 
     public func stop() {
         NSWorkspace.shared.notificationCenter.removeObserver(self)
         runningApps.removeAll()
-    }
-
-    public func currentAppNames() -> [String] {
-        runningApps.values.map(\.name)
     }
 
     @objc private func appLaunched(_ notification: Notification) {
@@ -64,14 +58,6 @@ public final class AppMonitor {
         runningApps.removeValue(forKey: bundleId)
         print("[FlexDaemon] \(name) quit")
         notifyChange()
-    }
-
-    @objc private func appActivated(_ notification: Notification) {
-        guard let app = notification.userInfo?[NSWorkspace.applicationUserInfoKey] as? NSRunningApplication,
-              let bundleId = app.bundleIdentifier,
-              Self.targetBundleIds.contains(bundleId) else { return }
-
-        print("[FlexDaemon] \(app.localizedName ?? bundleId) activated")
     }
 
     private func notifyChange() {

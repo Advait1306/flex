@@ -1,18 +1,6 @@
 import AppKit
 import AXSwift
 
-public struct ExtractedItem {
-    public let text: String
-    public let contextId: String
-    public let context: String
-
-    public init(text: String, contextId: String, context: String) {
-        self.text = text
-        self.contextId = contextId
-        self.context = context
-    }
-}
-
 // MARK: - App classification
 
 public enum AppCategory: String {

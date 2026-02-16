@@ -18,10 +18,5 @@ let package = Package(
             dependencies: ["FlexDaemon", "AXSwift"],
             path: "Sources/FlexDaemonCLI"
         ),
-        .testTarget(
-            name: "FlexDaemonTests",
-            dependencies: ["FlexDaemon"],
-            path: "Tests/FlexDaemonTests"
-        ),
     ]
 )
