@@ -129,9 +129,15 @@ public enum ChromiumHelper {
 public enum AXTreeHelper {
     /// Roles that carry text content we care about
     private static let textRoles: Set<String> = [
-        "AXStaticText", "AXTextField", "AXTextArea",
+        "AXStaticText",
         "AXLink", "AXHeading", "AXCell",
         "AXGenericElement", "AXButton",
+    ]
+
+    /// Roles for editable input fields — skip these entirely (content + children)
+    /// to avoid triggering the pipeline on every keystroke
+    private static let inputRoles: Set<String> = [
+        "AXTextField", "AXTextArea",
     ]
 
     /// Roles that provide structural context (include if they have a meaningful name)
@@ -231,6 +237,11 @@ public enum AXTreeHelper {
         guard depth < maxDepth else { return }
 
         let role = getString(element, kAXRoleAttribute) ?? ""
+
+        // Skip input fields entirely — their changing values trigger
+        // the pipeline on every keystroke (e.g. typing in Slack)
+        if inputRoles.contains(role) { return }
+
         let title = getString(element, kAXTitleAttribute) ?? ""
         let value = getString(element, kAXValueAttribute) ?? ""
         let description = getString(element, kAXDescriptionAttribute) ?? ""
@@ -251,7 +262,7 @@ public enum AXTreeHelper {
             }
         }
 
-        // Always recurse into children to find nested text
+        // Recurse into children to find nested text
         let children = getChildren(element)
         for child in children {
             walkTextTree(child, into: &lines, depth: depth + 1, maxDepth: maxDepth)

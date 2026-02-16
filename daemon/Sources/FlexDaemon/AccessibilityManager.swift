@@ -10,6 +10,13 @@ public final class AccessibilityManager {
     private var isPaused = false
     public private(set) var enabledApps: Set<String> = []      // bundleId set
 
+    /// Apps enabled by default on startup — others must be toggled on manually
+    private static let defaultEnabledApps: Set<String> = [
+        "com.tinyspeck.slackmacgap",   // Slack
+        "com.linear",                   // Linear
+        "net.whatsapp.WhatsApp",        // WhatsApp
+    ]
+
     private var pollingInterval: TimeInterval = 1.0
 
     /// Called when content changes for an app: (appName, bundleId, content, category, contentHash)
@@ -76,7 +83,10 @@ public final class AccessibilityManager {
         pids[app.bundleId] = app.pid
         categories[app.bundleId] = category
         appNames[app.bundleId] = app.name
-        enabledApps.insert(app.bundleId)
+        // Only auto-enable default apps; others are tracked but disabled until toggled on
+        if Self.defaultEnabledApps.contains(app.bundleId) {
+            enabledApps.insert(app.bundleId)
+        }
 
         // Only Electron apps need AXManualAccessibility enabled
         if category == .electron {
@@ -84,8 +94,8 @@ public final class AccessibilityManager {
             AXUIElementSetAttributeValue(axRef, "AXManualAccessibility" as CFString, kCFBooleanTrue)
         }
 
-        // Start polling
-        if !isPaused {
+        // Start polling only if the app is enabled
+        if !isPaused && enabledApps.contains(app.bundleId) {
             startPolling(bundleId: app.bundleId)
         }
 
