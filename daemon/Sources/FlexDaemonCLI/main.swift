@@ -82,8 +82,6 @@ if let treeIdx = CommandLine.arguments.firstIndex(of: "--tree") {
         exit(0)
     }
 
-    var output = ""
-
     switch category {
     case .electron:
         // Enable AX tree for Electron apps
@@ -91,27 +89,37 @@ if let treeIdx = CommandLine.arguments.firstIndex(of: "--tree") {
         AXUIElementSetAttributeValue(axRef, "AXManualAccessibility" as CFString, kCFBooleanTrue)
         Thread.sleep(forTimeInterval: 0.5)
 
-        let title = AXTreeHelper.windowTitle(pid: pid) ?? "(no window title)"
-        print("Window: \(title)")
-        print(String(repeating: "─", count: 60))
-
-        output = AXTreeHelper.getTextTree(pid: pid)
-        if output.isEmpty {
+        let windows = AXTreeHelper.getPerWindowTextTrees(pid: pid)
+        if windows.isEmpty {
             print("(no text content found)")
         } else {
-            print(output)
+            for (i, window) in windows.enumerated() {
+                if i > 0 { print("") }
+                print("Window: \(window.title)")
+                print(String(repeating: "─", count: 60))
+                print(window.text)
+                let hash = SHA256.hash(data: Data(window.text.utf8))
+                let short = hash.prefix(8).map { String(format: "%02x", $0) }.joined()
+                print(String(repeating: "─", count: 60))
+                print("Hash: \(short)...")
+            }
         }
 
     case .safari, .generic:
-        let title = AXTreeHelper.windowTitle(pid: pid) ?? "(no window title)"
-        print("Window: \(title)")
-        print(String(repeating: "─", count: 60))
-
-        output = AXTreeHelper.getTextTree(pid: pid)
-        if output.isEmpty {
+        let windows = AXTreeHelper.getPerWindowTextTrees(pid: pid)
+        if windows.isEmpty {
             print("(no text content found)")
         } else {
-            print(output)
+            for (i, window) in windows.enumerated() {
+                if i > 0 { print("") }
+                print("Window: \(window.title)")
+                print(String(repeating: "─", count: 60))
+                print(window.text)
+                let hash = SHA256.hash(data: Data(window.text.utf8))
+                let short = hash.prefix(8).map { String(format: "%02x", $0) }.joined()
+                print(String(repeating: "─", count: 60))
+                print("Hash: \(short)...")
+            }
         }
 
     case .chromium:
@@ -120,7 +128,6 @@ if let treeIdx = CommandLine.arguments.firstIndex(of: "--tree") {
             if tabs.isEmpty {
                 print("(no tabs found)")
             } else {
-                var parts: [String] = []
                 for (i, tab) in tabs.enumerated() {
                     if i > 0 { print("") }
                     print("Tab \(i + 1): \(tab.title)")
@@ -130,10 +137,12 @@ if let treeIdx = CommandLine.arguments.firstIndex(of: "--tree") {
                         print("(no text content)")
                     } else {
                         print(tab.text)
-                        parts.append(tab.text)
+                        let hash = SHA256.hash(data: Data(tab.text.utf8))
+                        let short = hash.prefix(8).map { String(format: "%02x", $0) }.joined()
+                        print(String(repeating: "─", count: 60))
+                        print("Hash: \(short)...")
                     }
                 }
-                output = parts.joined(separator: "\n")
             }
         } else {
             if let tab = ChromiumHelper.extractActiveTab(appName: runningApp.localizedName ?? appName) {
@@ -144,19 +153,15 @@ if let treeIdx = CommandLine.arguments.firstIndex(of: "--tree") {
                     print("(no text content)")
                 } else {
                     print(tab.text)
-                    output = tab.text
+                    let hash = SHA256.hash(data: Data(tab.text.utf8))
+                    let short = hash.prefix(8).map { String(format: "%02x", $0) }.joined()
+                    print(String(repeating: "─", count: 60))
+                    print("Hash: \(short)...")
                 }
             } else {
                 print("(could not extract active tab — is the browser open?)")
             }
         }
-    }
-
-    if !output.isEmpty {
-        let hash = SHA256.hash(data: Data(output.utf8))
-        let short = hash.prefix(8).map { String(format: "%02x", $0) }.joined()
-        print(String(repeating: "─", count: 60))
-        print("Hash: \(short)...")
     }
 
     exit(0)

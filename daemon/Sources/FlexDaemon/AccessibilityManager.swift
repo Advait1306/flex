@@ -6,7 +6,6 @@ public final class AccessibilityManager {
     private var categories: [String: AppCategory] = [:]        // bundleId -> category
     private var appNames: [String: String] = [:]               // bundleId -> display name
     private var pids: [String: pid_t] = [:]                    // bundleId -> pid
-    private var lastHashes: [String: String] = [:]             // bundleId -> full hash (fast path)
     private let hashStore = HashStore()
     private var isPaused = false
     public private(set) var enabledApps: Set<String> = []      // bundleId set
@@ -112,7 +111,6 @@ public final class AccessibilityManager {
         appNames.removeValue(forKey: bundleId)
         pids.removeValue(forKey: bundleId)
         enabledApps.remove(bundleId)
-        lastHashes.removeValue(forKey: bundleId)
         print("[FlexDaemon] Detached from \(bundleId)")
     }
 
@@ -133,32 +131,26 @@ public final class AccessibilityManager {
               let pid = pids[bundleId],
               let appName = appNames[bundleId] else { return }
 
-        let content: String
-
         switch category {
         case .chromium:
             if let tab = ChromiumHelper.extractActiveTab(appName: appName) {
-                content = "\(tab.title)\n\(tab.url)\n\(tab.text)"
-            } else {
-                return
+                let content = "\(tab.title)\n\(tab.url)\n\(tab.text)"
+                emitIfChanged(content: content, appName: appName, bundleId: bundleId, category: category)
             }
         case .electron, .safari, .generic:
-            let tree = AXTreeHelper.getTextTree(pid: pid)
-            if tree.isEmpty { return }
-            content = tree
+            let windows = AXTreeHelper.getPerWindowTextTrees(pid: pid)
+            for window in windows {
+                emitIfChanged(content: window.text, appName: appName, bundleId: bundleId, category: category)
+            }
         }
+    }
 
+    private func emitIfChanged(content: String, appName: String, bundleId: String, category: AppCategory) {
         let hashDigest = SHA256.hash(data: Data(content.utf8))
         let fullHash = hashDigest.map { String(format: "%02x", $0) }.joined()
         let short = hashDigest.prefix(8).map { String(format: "%02x", $0) }.joined()
 
-        // Fast path: same content as last poll for this app — skip without Set lookup
-        if lastHashes[bundleId] == fullHash { return }
-        lastHashes[bundleId] = fullHash
-
-        // Persistent check: skip if this content was ever sent before (survives restarts)
         if hashStore.checkAndRecord(fullHash) {
-            print("[FlexDaemon] Skipping duplicate: \(appName) (hash: \(short)...)")
             return
         }
 

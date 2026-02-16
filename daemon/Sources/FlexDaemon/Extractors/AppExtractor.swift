@@ -124,6 +124,13 @@ public enum ChromiumHelper {
     }
 }
 
+// MARK: - Per-window content
+
+public struct WindowContent {
+    public let title: String
+    public let text: String
+}
+
 // MARK: - AX tree helper
 
 public enum AXTreeHelper {
@@ -145,39 +152,21 @@ public enum AXTreeHelper {
         "AXGroup", "AXList", "AXScrollArea", "AXWebArea",
     ]
 
-    /// Walk the AX tree of all windows and return a YAML-like indented tree of text content.
-    public static func getTextTree(pid: pid_t) -> String {
+    /// Extract each window's text tree independently as a `[WindowContent]`.
+    public static func getPerWindowTextTrees(pid: pid_t) -> [WindowContent] {
         let appRef = AXUIElementCreateApplication(pid)
         let windows = getAllWindows(appRef)
-        guard !windows.isEmpty else { return "" }
-
-        var lines: [String] = []
+        var results: [WindowContent] = []
         for (i, window) in windows.enumerated() {
             let title = getString(window, kAXTitleAttribute) ?? "Window \(i + 1)"
-            if windows.count > 1 {
-                if i > 0 { lines.append("") }
-                lines.append("[\(title)]:")
-                walkTextTree(window, into: &lines, depth: 1, maxDepth: 50)
-            } else {
-                walkTextTree(window, into: &lines, depth: 0, maxDepth: 50)
+            var lines: [String] = []
+            walkTextTree(window, into: &lines, depth: 0, maxDepth: 50)
+            let text = lines.joined(separator: "\n")
+            if !text.isEmpty {
+                results.append(WindowContent(title: title, text: text))
             }
         }
-        return lines.joined(separator: "\n")
-    }
-
-    /// Get the window title via AX API (from focused or first window).
-    public static func windowTitle(pid: pid_t) -> String? {
-        let appRef = AXUIElementCreateApplication(pid)
-        if let window = getFocusedWindow(appRef) {
-            return getString(window, kAXTitleAttribute)
-        }
-        let windows = getAllWindows(appRef)
-        for window in windows {
-            if let title = getString(window, kAXTitleAttribute) {
-                return title
-            }
-        }
-        return nil
+        return results
     }
 
     /// Dump the raw AX tree with all roles and attributes (for debugging).
