@@ -5,7 +5,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from tortoise import Tortoise
 
-from routers import facts_router, freewrite_router, todos_router, transcription_router
+from routers import auth_router, daemon_router, facts_router, freewrite_router, todos_router, transcription_router
 import store
 
 DB_URL = os.getenv("DATABASE_URL", "postgres://flex:flex@localhost:5433/flex")
@@ -26,6 +26,8 @@ async def lifespan(app: FastAPI):
 
 app = FastAPI(lifespan=lifespan)
 
+app.include_router(auth_router)
+app.include_router(daemon_router)
 app.include_router(freewrite_router)
 app.include_router(todos_router)
 app.include_router(facts_router)
