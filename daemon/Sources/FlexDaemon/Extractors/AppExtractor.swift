@@ -252,7 +252,8 @@ public enum AXTreeHelper {
             // Text element — emit its content
             let text = !value.isEmpty ? value : (!title.isEmpty ? title : description)
             if !text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
-                lines.append("\(indent)- \(text)")
+                let marker = roleMarker(role)
+                lines.append("\(indent)- \(marker)\(text)")
             }
         } else if contextRoles.contains(role) {
             // Structural element — emit name as context header if present
@@ -266,6 +267,18 @@ public enum AXTreeHelper {
         let children = getChildren(element)
         for child in children {
             walkTextTree(child, into: &lines, depth: depth + 1, maxDepth: maxDepth)
+        }
+    }
+
+    private static func roleMarker(_ role: String) -> String {
+        switch role {
+        case "AXButton":         return "[Button] "
+        case "AXLink":           return "[Link] "
+        case "AXHeading":        return "[Heading] "
+        case "AXCell":           return "[Cell] "
+        case "AXStaticText":     return ""
+        case "AXGenericElement": return ""
+        default:                 return ""
         }
     }
 
