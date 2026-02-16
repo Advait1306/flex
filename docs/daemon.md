@@ -24,25 +24,26 @@ Classification happens in `AppClassifier.classify(bundleId:)` which checks the b
 
 ### AX Tree Extraction (`AXTreeHelper`)
 
-Walks all windows of a process and produces a YAML-like indented text tree. The walker recurses through every element but only emits output for specific roles:
+Extracts each window independently via `getPerWindowTextTrees(pid:)`, returning a `[WindowContent]` (title + text per window). Each window is hashed and sent separately, so window reordering (z-order changes) doesn't trigger false change detection. The walker recurses through every element but only emits output for specific roles:
 
 **Text roles** — emitted as content (`- text here`):
 
 | Role | Typical source |
 |------|---------------|
 | `AXStaticText` | Labels, paragraphs, inline text |
-| `AXTextField` | Single-line text inputs |
-| `AXTextArea` | Multi-line text inputs (e.g. compose box) |
 | `AXLink` | Hyperlinks |
 | `AXHeading` | Section headings |
 | `AXCell` | Table/grid cells |
 | `AXGenericElement` | Catch-all used by Catalyst apps (e.g. WhatsApp chat messages) |
 | `AXButton` | Buttons — often carry useful text in Catalyst apps (e.g. WhatsApp chat list items) |
 
+**Input roles** — skipped entirely (content + children) to avoid triggering the pipeline on every keystroke:
+`AXTextField`, `AXTextArea`
+
 **Context roles** — emitted as section headers (`name:`) if they have a non-empty title or description:
 `AXGroup`, `AXList`, `AXScrollArea`, `AXWebArea`
 
-For text roles, the value is chosen with this priority: `value` > `title` > `description`. Empty/whitespace-only strings are skipped.
+For text roles, the value is chosen with this priority: `value` > `title` > `description`. Empty/whitespace-only strings are skipped. Text roles also get semantic markers (e.g. `[Button]`, `[Link]`, `[Heading]`) prepended to help downstream agents understand structure.
 
 **Raw mode** (`--raw`): dumps every element in the tree with its role and all attributes. Useful for debugging when an app's content isn't showing up — check what roles it uses and whether they're in the text/context sets above.
 
@@ -93,8 +94,8 @@ App: Slack (pid 1234, com.tinyspeck.slackmacgap, electron)
 
 ### Output format
 
-- **Electron/Safari/Generic**: window title + indented text tree
-- **Chromium (default)**: tab title + URL + page text for active tab
+- **Electron/Safari/Generic**: each window printed separately with its title, text tree, and content hash
+- **Chromium (default)**: tab title + URL + page text + hash for active tab
 - **Chromium (`--all-tabs`)**: same for every tab across all windows
 
 ## Known Limitations
@@ -106,6 +107,14 @@ macOS does not populate the Accessibility tree for windows that are in a full-sc
 The app still appears as running and its window exists, but the tree has no children. Windowed mode (even minimized to the Dock) works fine — the limitation is specific to full-screen Spaces that aren't in the foreground.
 
 This is a system-level limitation of the macOS Accessibility API, not something we can work around without bringing the app to the foreground. It affects all tools that use `AXUIElement` — see [alt-tab-macos #447](https://github.com/lwouis/alt-tab-macos/issues/447) and [Apple Developer Forums](https://developer.apple.com/forums/thread/121114) for discussion.
+
+## Change Detection
+
+Each window (or Chromium tab) is hashed and sent independently. This means:
+
+- **Window reordering** (clicking between windows changes z-order) does **not** trigger false changes
+- A change in one window only re-sends that window, not all windows
+- Dedup uses a single persistent `HashStore` (`~/.config/flex/seen-hashes.json`) — a `Set<String>` with O(1) lookup that survives daemon restarts
 
 ### Chromium `execute javascript` requires opt-in
 
