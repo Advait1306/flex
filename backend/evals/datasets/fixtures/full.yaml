@@ -38,3 +38,7 @@ facts:
     fact: "User's team member Sabesh handles frontend development"
     category: "work"
     tags: ["team", "Sabesh", "frontend"]
+  - id: "f4"
+    fact: "Project uses SuperMemory for vector and graph DB storage, with a plan to roll own Qdrant and Neo4j infra later"
+    category: "work"
+    tags: ["SuperMemory", "storage", "Qdrant", "Neo4j"]

@@ -3,14 +3,12 @@ import logging
 
 from tabulate import tabulate
 
-from logging_config import setup_logging
-setup_logging(level=logging.ERROR)
-
-from ai.config import set_app_name
-set_app_name("Flex-Eval")
-
-from .fixtures import generate_fixtures
-from . import eval_daemon_processor, eval_freewrite_processor, eval_search, eval_triage_agent
+LOG_LEVELS = {
+    "debug": logging.DEBUG,
+    "info": logging.INFO,
+    "warn": logging.WARNING,
+    "error": logging.ERROR,
+}
 
 ALL_COMPONENTS = ["freewrite", "search", "triage", "daemon"]
 
@@ -66,7 +64,23 @@ def main():
         action="store_true",
         help="Regenerate fixture embeddings and exit",
     )
+    parser.add_argument(
+        "--log-level",
+        choices=LOG_LEVELS.keys(),
+        default="error",
+        help="Logging level (default: error)",
+    )
     args = parser.parse_args()
+
+    # Must call setup_logging BEFORE importing modules that use get_logger
+    from logging_config import setup_logging
+    setup_logging(level=LOG_LEVELS[args.log_level])
+
+    from ai.config import set_app_name
+    set_app_name("Flex-Eval")
+
+    from .fixtures import generate_fixtures
+    from . import eval_daemon_processor, eval_freewrite_processor, eval_search, eval_triage_agent
 
     if args.generate_fixtures:
         generate_fixtures()

@@ -83,6 +83,7 @@ def make_tools(user_id: int) -> list:
         for result in results:
             f = result.fact
             fact_info: dict = {
+                "id": f.id,
                 "fact": f.fact,
                 "category": f.category,
                 "relevance_score": round(result.score, 3),
@@ -127,6 +128,38 @@ def make_tools(user_id: int) -> list:
         _save_fact(fact_item, tags=tags, user_id=user_id)
         log.info(f"Saved fact: {fact[:50]}...")
         return f"Fact saved: {fact}"
+
+    @tool
+    def update_fact(
+        fact_id: str,
+        fact: str,
+        category: Literal["preference", "personal", "work", "context", "other"],
+        tags: list[str],
+    ) -> str:
+        """Update an existing fact with new or enriched information.
+
+        Use this when search_facts returns a match that covers the same topic
+        as the new information. This replaces the old fact content.
+
+        Args:
+            fact_id: ID of the existing fact to update (from search_facts results)
+            fact: The updated fact text (should incorporate both old and new information)
+            category: Category of the fact
+            tags: Keywords for semantic search
+
+        Returns:
+            Confirmation that the fact was updated
+        """
+        fact_item = FactItem(
+            id=fact_id,
+            fact=fact,
+            category=category,
+            tags=tags,
+            created_at=datetime.now().isoformat(),
+        )
+        _save_fact(fact_item, tags=tags, user_id=user_id)
+        log.info(f"Updated fact {fact_id}: {fact[:50]}...")
+        return f"Fact updated: {fact}"
 
     @tool
     def create_todo(
@@ -204,7 +237,7 @@ def make_tools(user_id: int) -> list:
         """
         return f"No action taken: {reason}"
 
-    return [search_todos, search_facts, save_fact, create_todo, update_todo, do_nothing]
+    return [search_todos, search_facts, save_fact, update_fact, create_todo, update_todo, do_nothing]
 
 
 TRIAGE_AGENT_PROMPT = """You are a triage agent that decides how to handle a SINGLE mentioned item.
@@ -218,10 +251,11 @@ Your job is to search for related todos/facts and make a decision.
 You have access to these tools:
 1. **search_todos** - Find existing todos that might be related to the current item
 2. **search_facts** - Find known facts/context about the user (preferences, contacts, past decisions)
-3. **save_fact** - Save information worth remembering (NOT task-related)
-4. **create_todo** - Create a new todo item
-5. **update_todo** - Update an existing todo item
-6. **do_nothing** - When no action is needed at all
+3. **save_fact** - Save a NEW fact worth remembering (NOT task-related)
+4. **update_fact** - Update an EXISTING fact with new/enriched information (use instead of save_fact when a matching fact already exists)
+5. **create_todo** - Create a new todo item
+6. **update_todo** - Update an existing todo item
+7. **do_nothing** - When no action is needed at all
 
 IMPORTANT: You run in a tool-calling loop. After each tool call, you will be invoked again
 with the result. Once you have completed all actions for this item, you MUST call do_nothing
@@ -232,7 +266,11 @@ WORKFLOW:
 1. If context is provided, search_todos using the context first (it likely refers to an existing todo)
 2. Then search_todos using the item text to find other related todos
 3. ALWAYS search_facts before taking any action — look for relevant preferences, personal info, or context that could enrich your decision
-4. Make your decision by calling create_todo, update_todo, save_fact, or do_nothing
+4. Make your decision:
+   - If search_facts returned a match covering the same topic as the new information, use **update_fact** with the existing fact's ID to replace/enrich it
+   - If no matching fact exists, use **save_fact** to create a new one
+   - For task-related items, use create_todo or update_todo as appropriate
+   - If no action is needed, use do_nothing
 5. After your action(s), call do_nothing to end the loop
 
 DECISION LOGIC:
@@ -282,7 +320,10 @@ If item is INFORMATION about an existing todo:
 
 If there is NO related todo:
 - For actionable items → create_todo
-- For valuable context/info → save_fact, then do_nothing
+- For valuable context/info:
+  - If search_facts returned a match on the same topic AND the new item is just a restatement/subset of what's already stored → do_nothing (do NOT update_fact just to rephrase)
+  - If search_facts returned a match on the same topic AND the new item adds genuinely new details (numbers, dates, decisions, names not in the existing fact) → update_fact with the existing fact's ID
+  - If no matching fact exists → save_fact to create a new fact
 - For pure greetings/thanks → do_nothing only
 
 EXAMPLES:
@@ -311,7 +352,9 @@ Without context:
 
 CRITICAL RULES:
 - When context is provided, prioritize finding the related todo — but still distinguish between status changes, new tasks, and information
-- ALWAYS search_todos AND search_facts before making any action (create_todo, update_todo, save_fact)
+- ALWAYS search_todos AND search_facts before making any action (create_todo, update_todo, save_fact, update_fact)
+- NEVER save a new fact when an existing fact covers the same topic — use update_fact to update it instead
+- NEVER update a fact with information it already contains — if the new item is a restatement, paraphrase, or subset of an existing fact, use do_nothing. Only use update_fact when the item provides genuinely NEW details (specific numbers, dates, decisions, names) not present in the existing fact.
 - **STATUS CHANGES ARE STATUS-ONLY**: When the intent is a status change (close, complete, start, cancel), call update_todo with ONLY `status` and `tags`. Do NOT set `description` or `title` — leave them as None. The `status` parameter is the ONLY way to change status. Never put status information in the description field.
 - When the item text contains a NEW ACTION VERB (figure out, set up, build, track, hire, etc.), create a NEW todo — do NOT append it as a note on an existing todo's description
 - Only use update_todo's description for adding pure INFORMATION (details, constraints, context) — never for new actionable work
@@ -375,7 +418,7 @@ def triage_agent(item: TriagePayload, *, user_id: int) -> None:
                 log.warning("LLM returned no tool calls, prompting for decision")
                 messages.append(
                     HumanMessage(
-                        content="Please make your decision using create_todo, update_todo, save_fact, or do_nothing."
+                        content="Please make your decision using create_todo, update_todo, save_fact, update_fact, or do_nothing."
                     )
                 )
                 continue
