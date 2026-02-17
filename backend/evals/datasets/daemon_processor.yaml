@@ -1,0 +1,40 @@
+groups:
+  - name: linear_views
+    scenarios:
+      - id: simple_title_only
+        app_name: "Linear"
+        app_category: "electron"
+        content_file: "daemon_inputs/linear_simple_title.txt"
+        expect:
+          action: do_nothing
+
+      - id: issue_detail_ui_chrome
+        app_name: "Linear"
+        app_category: "electron"
+        content_file: "daemon_inputs/linear_issue_detail.txt"
+        expect:
+          action: triage
+          max_items: 3
+          all_items_have_context: true
+          context_contains: ["ASEE-15"]
+          items_not_contain: ["[Button]", "[Link]", "Skip to content"]
+
+      - id: board_view
+        app_name: "Linear"
+        app_category: "electron"
+        content_file: "daemon_inputs/linear_board_view.txt"
+        expect:
+          action: triage
+          min_items: 1
+          all_items_have_context: true
+          items_not_contain: ["[Button]", "[Link]", "Skip to content"]
+
+      - id: pr_view
+        app_name: "Linear"
+        app_category: "electron"
+        content_file: "daemon_inputs/linear_pr_view.txt"
+        expect:
+          action: triage
+          max_items: 5
+          all_items_have_context: true
+          items_not_contain: ["[Button]", "[Link]", "Skip to content", "Copy file path"]

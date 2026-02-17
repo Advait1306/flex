@@ -1,0 +1,161 @@
+  ASEE-15 feat: automatic testing for UI:
+              ASEE-15 feat: automatic testing for UI:
+                    Unable to play media.:
+                      - [Button] play
+                        - [Button] mute
+                    - [Link] Skip to content
+                      - Skip to content
+                            - [Button] Go back
+                            - [Button] Go forward
+                                - Sixhuman
+                              - [Button] Search workspace
+                                - [Button] Resume editing
+                                - [Button] Inbox
+                                        - [Link] Inbox
+                                          - Inbox
+                                - [Button] Reviews
+                                      - [Link] Reviews
+                                        - Reviews
+                                - [Button] My issues
+                                        - [Link] My issues
+                                          - My issues
+                                - [Button] Workspace
+                                  - [Button] Initiatives
+                                          - [Link] Initiatives
+                                            - Initiatives
+                                  - [Button] Projects
+                                          - [Link] Projects
+                                            - Projects
+                                  - [Button] Views
+                                          - [Link] Views
+                                            - Views
+                                  - [Button] Customers
+                                          - [Link] Customers
+                                            - Customers
+                                      - [Button] Show more links
+                                - [Button] Your teams
+                                  - [Button] Join a team
+                                      - [Button] AUG-SEE Issues Projects Views
+                                          AUG-SEE:
+                                            - [Button] AUG-SEE Team menu
+                                                  - AUG-SEE
+                                              Team menu:
+                                                  - [Link] Issues
+                                                    - Issues
+                                                  - [Link] Projects
+                                                    - Projects
+                                                - [Link] Views
+                                                  - Views
+                                      - [Button] Engineering
+                                          Engineering:
+                                            - [Button] Engineering Team menu
+                                                  - Engineering
+                                              Team menu:
+                                - [Button] Try
+                                - [Button] View changelog
+                              - What's new
+                              - Advanced filters and share issues in private teams
+                                - [Button] Collapse into help menu
+                        - [Button] ASEE-15 feat: automatic testing for UI
+                            - ASEE-15 feat: automatic testing for UI
+                        - [Button] Open new tab
+                                    - [Link] Active issues
+                                      Active issues:
+                                        - AUG-SEE
+                                        - ›
+                                    - [Link] ASEE-15
+                                      - ASEE-15
+                                    - 1
+                                    -  /
+                                    - 6
+                                      - [Button] Go to next item
+                                      - [Button] Go to previous item
+                                Issue synced with GitHub sixhuman/august-see #20 feat: automatic testing for UI Open GitHub issue Open sync menu feat: automatic testing for UI Add reaction Attach images, files or videos Create new sub-issue Collapse resources section Add new link feat: Add comprehensive test suite with 63 tests #21 Open Open menu Activity Unsubscribe from issue Change subscribers Advait B advait :
+                                    - Issue
+                                    -  synced with
+                                    - GitHub
+                                    - [Link] sixhuman/august-see #20 feat: automatic testing for UI
+                                      - #20
+                                    - [Link] Open GitHub issue
+                                    - [Button] Add reaction
+                                    - [Button] Attach images, files or videos
+                                        - [Button] Create new sub-issue
+                                        - [Button] Collapse resources section
+                                      - [Button] Add new link
+                                        - [Link] feat: Add comprehensive test suite with 63 tests #21 Open Open menu
+                                            - feat: Add comprehensive test suite with 63 tests
+                                            - #21
+                                          - Open
+                                    - Activity
+                                      - [Button] Unsubscribe from issue
+                                      - [Button] Change subscribers
+                                          Advait B:
+                                            - AB
+                                              - [Link] Advait B
+                                                  Advait B:
+                                                    - AB
+                                            - [Link] advait
+                                              - advait
+                                            - created the issue
+                                              - ·
+                                              - [Link] Sat Feb 7, 2026, 9:23:02 pm
+                                                - 9d ago
+                                              - GitHub
+                                              -  comments from
+                                              - [Link] sixhuman/august-see #20 feat: automatic testing for UI
+                                                - #20
+                                              - ⁠
+                                                    Advait B:
+                                                      - AB
+                                                        - Leave a comment…
+                                                  - [Button] Submit comment
+                                                  - [Button] Attach images, files or videos
+                                          - [Button] Collapse resolved thread
+                                            - [Link] Advait B
+                                                Advait B:
+                                                  - AB
+                                          - [Link] advait
+                                            - advait
+                                          -  linked
+                                          - [Link] feat: Add comprehensive test suite with 63 tests
+                                            - feat: Add comprehensive test suite with 63 tests
+                                            - ·
+                                            - [Link] Sat Feb 7, 2026, 11:07:46 pm
+                                              - 9d ago
+                                            - [Link] advait
+                                              - advait
+                                            - moved
+                                            -  from
+                                            - In Progress
+                                            -  to
+                                            - In Review
+                                              - ·
+                                              - [Link] Sat Feb 7, 2026, 11:07:46 pm
+                                                - 9d ago
+                                        - [Button] Submit comment
+                                        - [Button] Attach images, files or videos
+                                  - Properties
+                                  - [Button] Copy issue URL
+                                    - [Button] Copy issue ID
+                                    - [Button] Copy branch name
+                                      - [Button] In Review
+                                        - In Review
+                                      - [Button] High Priority High
+                                        - High
+                                      - [Button] Advait B advait
+                                          Advait B:
+                                            - AB
+                                        - advait
+                                    - [Link] Go to user
+                                    - Labels
+                                      Add labels:
+                                          - [Button] Add labels
+                                    - Project
+                                      - [Button] Add to project
+                    Notifications alt+T:
+                      - feat: Add comprehensive test suite with 63 tests
+                      - #21
+                      - sixhuman/august-see
+                      - advait/asee-15
+                      -  →
+                      - main

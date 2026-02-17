@@ -17,7 +17,7 @@ todos:
   - id: "t4"
     title: "Buy billboards for BLR"
     description: "Purchase billboard advertising space in Bangalore"
-    status: "completed"
+    status: "pending"
     tags: ["billboard", "BLR", "advertising", "marketing"]
   - id: "t5"
     title: "Call dentist for appointment"

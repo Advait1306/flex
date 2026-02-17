@@ -1,0 +1,132 @@
+  AUG-SEE › Active issues:
+              AUG-SEE › Active issues:
+                    Unable to play media.:
+                      - [Button] play
+                        - [Button] mute
+                    - [Link] Skip to content
+                      - Skip to content
+                            - [Button] Go back
+                            - [Button] Go forward
+                              - Sixhuman
+                            - [Button] Search workspace
+                              - [Button] Resume editing
+                                - [Button] Inbox
+                                      - [Link] Inbox
+                                        - Inbox
+                                - [Button] Reviews
+                                      - [Link] Reviews
+                                        - Reviews
+                                - [Button] My issues
+                                      - [Link] My issues
+                                        - My issues
+                                - [Button] Workspace
+                                  - [Button] Initiatives
+                                          - [Link] Initiatives
+                                            - Initiatives
+                                  - [Button] Projects
+                                          - [Link] Projects
+                                            - Projects
+                                  - [Button] Views
+                                          - [Link] Views
+                                            - Views
+                                  - [Button] Customers
+                                          - [Link] Customers
+                                            - Customers
+                                      - [Button] Show more links
+                                - [Button] Your teams
+                                  - [Button] Join a team
+                                      - [Button] AUG-SEE Issues Projects Views
+                                          AUG-SEE:
+                                            - [Button] AUG-SEE Team menu
+                                                  - AUG-SEE
+                                              Team menu:
+                                                  - [Link] Issues
+                                                    - Issues
+                                                  - [Link] Projects
+                                                    - Projects
+                                                - [Link] Views
+                                                  - Views
+                                      - [Button] Engineering
+                                          Engineering:
+                                            - [Button] Engineering Team menu
+                                                  - Engineering
+                                              Team menu:
+                                - [Button] Try
+                                - [Button] View changelog
+                              - What's new
+                              - Advanced filters and share issues in private teams
+                                - [Button] Collapse into help menu
+                        - [Button] AUG-SEE › Active issues
+                            - AUG-SEE › Active issues
+                        - [Button] Open new tab
+                                - [Heading] AUG-SEE
+                                  - AUG-SEE
+                                  - [Link] All issues
+                                      - All issues
+                                  - [Link] Active
+                                      - Active
+                                  - [Link] Backlog
+                                      - Backlog
+                                  - [Button] Add new view
+                              - [Button] Setup active issues notifications
+                              - [Button] Open details
+                              - [Button] Add filter
+                            - [Button] Display options
+                                          - [Button] Collapse group
+                                          Pull request is being reviewed:
+                                            - In Review
+                                          - [Button] 3
+                                      - [Link] Select issue High Priority ASEE-15 feat: automatic testing for UI #21 Advait B Created Feb 7, 9:23:02 pm
+                                          Select issue:
+                                          - ASEE-15
+                                            - feat: automatic testing for UI
+                                          - #21
+                                            Advait B:
+                                              - AB
+                                          Created Feb 7, 9:23:02 pm:
+                                            - Feb 7
+                                      - [Link] Select issue Low Priority ASEE-3 feat: cmd+k menu for quick actions #17 Advait B Created Jan 26, 12:38:15 pm
+                                          Select issue:
+                                          - ASEE-3
+                                            - feat: cmd+k menu for quick actions
+                                          - #17
+                                            Advait B:
+                                              - AB
+                                          Created Jan 26, 12:38:15 pm:
+                                            - Jan 26
+                                      - [Link] Select issue No Priority ASEE-16 feat: PR review view #23 Advait B Created Feb 8, 12:07:20 am
+                                          Select issue:
+                                          - ASEE-16
+                                            - feat: PR review view
+                                          - #23
+                                            Advait B:
+                                              - AB
+                                          Created Feb 8, 12:07:20 am:
+                                            - Feb 8
+                                          - [Button] Collapse group
+                                          - Todo
+                                          - [Button] 3
+                                      - [Link] Select issue High Priority ASEE-8 feat: Worktree support Feature Advait B Created Jan 27, 6:40:51 pm
+                                          Select issue:
+                                          - ASEE-8
+                                            - feat: Worktree support
+                                          - Feature
+                                            Advait B:
+                                              - AB
+                                          Created Jan 27, 6:40:51 pm:
+                                            - Jan 27
+                                      - [Link] Select issue Low Priority ASEE-10 feat: Inbuilt PR reviewing Advait B Created Jan 28, 2:05:32 pm
+                                          Select issue:
+                                          - ASEE-10
+                                            - feat: Inbuilt PR reviewing
+                                            Advait B:
+                                              - AB
+                                          Created Jan 28, 2:05:32 pm:
+                                            - Jan 28
+                                      - [Link] Select issue No Priority ASEE-2 feat: Onboarding flow Created Jan 26, 12:37:55 pm
+                                          Select issue:
+                                          - ASEE-2
+                                            - feat: Onboarding flow
+                                          Created Jan 26, 12:37:55 pm:
+                                            - Jan 26
+                    Notifications alt+T:

@@ -56,20 +56,24 @@ def _evaluate_once(scenario: dict) -> dict[str, bool]:
     return checks
 
 
-def run(runs: int = 1) -> list[ScenarioResult]:
-    """Run all search eval scenarios. Deterministic, so 1 run is default."""
+def run(runs: int = 1, scenario_filter: str | None = None) -> list[ScenarioResult]:
+    """Run search eval scenarios, optionally filtered by ID substring. Deterministic, so 1 run is default."""
     with open(DATASETS_DIR / "search.yaml") as f:
         data = yaml.safe_load(f)
 
     results = []
     for group in data["groups"]:
         fixture_name = group.get("fixtures")
+        scenarios = [s for s in group["scenarios"] if not scenario_filter or scenario_filter in s["id"]]
+        if not scenarios:
+            continue
+
         if fixture_name:
             print(f"  Loading fixture set: {fixture_name}")
             load_fixture_set(fixture_name)
 
         try:
-            for scenario in group["scenarios"]:
+            for scenario in scenarios:
                 sr = ScenarioResult(scenario_id=scenario["id"])
                 for i in range(runs):
                     print(f"  [{scenario['id']}] run {i + 1}/{runs}...", end=" ", flush=True)
