@@ -56,6 +56,12 @@ Uses `NSAppleScript` (in-process, no subprocess) to talk to the browser. Two mod
 
 Uses delimiter-based output parsing (`<<<DELIM>>>`, `<<<FIELD>>>`, `<<<TAB>>>`) to pack multiple values into a single AppleScript return string.
 
+## Running the Daemon
+
+```bash
+./daemon.sh    # Launch daemon with backend URL defaulting to localhost:8000
+```
+
 ## CLI Usage
 
 ```bash

@@ -44,6 +44,8 @@ When running both, use `Ctrl+B D` to detach from tmux.
 macOS menu bar app that captures ambient context from running apps (Slack, Linear, browsers, etc.) and sends snapshots to the backend for processing.
 
 ```bash
+./daemon.sh                                # Launch daemon (backend: localhost:8000)
+
 # CLI debugging tool
 ./daemon.sh --tree Slack              # AX tree extraction
 ./daemon.sh --tree "Google Chrome"    # Chromium active tab
@@ -64,19 +66,19 @@ See [docs/daemon.md](docs/daemon.md) for details on app categories, extraction s
 
 ## API Endpoints
 
-| Method | Endpoint                    | Description                          |
-| ------ | --------------------------- | ------------------------------------ |
-| GET    | `/`                         | Hello message                        |
-| GET    | `/api/health`               | Health check                         |
-| POST   | `/api/pipeline/run`         | Run agent pipeline on a document     |
-| GET    | `/api/todos`                | List all todos                       |
-| GET    | `/api/todos/{id}`           | Get a todo                           |
-| POST   | `/api/todos`                | Create a todo                        |
-| PATCH  | `/api/todos/{id}`           | Update a todo                        |
-| DELETE | `/api/todos/{id}`           | Delete a todo                        |
-| GET    | `/api/facts`                | List all facts                       |
-| GET    | `/api/freewrite`            | Get freewrite document               |
-| PUT    | `/api/freewrite`            | Update freewrite document            |
-| GET    | `/api/auth/check`           | Validate auth token                  |
-| POST   | `/api/transcription/session`| Create ephemeral transcription token |
-| POST   | `/api/daemon/snapshot`      | Receive daemon content snapshot      |
+| Method | Endpoint                     | Description                          |
+| ------ | ---------------------------- | ------------------------------------ |
+| GET    | `/`                          | Hello message                        |
+| GET    | `/api/health`                | Health check                         |
+| POST   | `/api/pipeline/run`          | Run agent pipeline on a document     |
+| GET    | `/api/todos`                 | List all todos                       |
+| GET    | `/api/todos/{id}`            | Get a todo                           |
+| POST   | `/api/todos`                 | Create a todo                        |
+| PATCH  | `/api/todos/{id}`            | Update a todo                        |
+| DELETE | `/api/todos/{id}`            | Delete a todo                        |
+| GET    | `/api/facts`                 | List all facts                       |
+| GET    | `/api/freewrite`             | Get freewrite document               |
+| PUT    | `/api/freewrite`             | Update freewrite document            |
+| GET    | `/api/auth/check`            | Validate auth token                  |
+| POST   | `/api/transcription/session` | Create ephemeral transcription token |
+| POST   | `/api/daemon/snapshot`       | Receive daemon content snapshot      |
