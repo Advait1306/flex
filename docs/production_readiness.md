@@ -6,7 +6,7 @@
 
 When the LLM generated malformed output we fail gracefully. This can currently be viewed in trace data. Although a datadog system should ideally be attached as well which would send alerts when these errors occur.
 
-|                                                              |                                                             |
+| Error indicator in trace tree                                | Error message in details                                    |
 | ------------------------------------------------------------ | ----------------------------------------------------------- |
 | ![Malformed LLM output 1](images/malformed_LLM_output_1.png) | ![Malformed LLM output2](images/malformed_LLM_output_2.png) |
 
@@ -98,7 +98,7 @@ TBD
 
 All of freewrite session data goes to our backend where it's stored in postgres table as a jsonb. Whenever a new sentence is added, we use that as a trigger along with last 10000 words as context.
 
-We can add a 24 hour erase mechanism onto this as well. All important data gets distilled down to facts that're stored in our vector database anyway. 
+We can add a 24 hour erase mechanism onto this as well. All important data gets distilled down to facts that're stored in our vector database anyway.
 
 For speech, we directly connect the user to OpenAI using a one time use token. OpenAI returns transcripts directly to the user which are written onto the freewrite document.
 
@@ -108,17 +108,17 @@ For the applications that're being observed, we get accessibility tree data that
 
 **What data is stored in the vector store vs discarded after processing?**
 
-We have two collections in the vector store. `Facts` and `Todos`. 
+We have two collections in the vector store. `Facts` and `Todos`.
 
 Facts contain data that can be used later to form todos. This involves preferences, updates, or any information that's provided without an intent. 
 
-Todos contain data on intent that the user has shown about getting something done. While creating these facts are searched to enrich with prior context. 
+Todos contain data on intent that the user has shown about getting something done. While creating these facts are searched to enrich with prior context.
 
 Other than these two pieces of information, everything else that enters the pipeline is discarded.
 
 **Could a user audit what's been sent to the LLM?**
 
-The current APIs don't allow for this, although we could add a source parameter on actions which would allow them to find out what had been sent. 
+The current APIs don't allow for this, although we could add a source parameter on actions which would allow them to find out what had been sent.
 
 User based auditing is a problem because our ingest pipeline has a terrible signal to noise ratio. Hence, we could have the ability to audit actions which link back to their triggers.
 
@@ -139,15 +139,15 @@ This can be solved in two ways:
 
 **Two action items from different sources that are actually the same task but worded differently**
 
-As long as there is a semantic similarity they'd be linked. 
+As long as there is a semantic similarity they'd be linked.
 
-When information reaches the triage agent, it's treated as source agnostic. Everything happens over the fact store & the todo store. 
+When information reaches the triage agent, it's treated as source agnostic. Everything happens over the fact store & the todo store.
 
 Both these stores have semantic searching using vector similarity matching on tags that have been generated while storing.
 
 **Vector store returns a high-confidence link that's actually wrong**
 
-This is a failure mode and hence can't be avoided completely. Although how these get handled can be greatly improved. Starting with user feedback. 
+This is a failure mode and hence can't be avoided completely. Although how these get handled can be greatly improved. Starting with user feedback.
 
 We should have an in app UX where the user can mark actions as valid / invalid (any feedback works) which would directly go inside langsmith and get attached to the trace.
 
@@ -157,7 +157,7 @@ Recommended reading - https://docs.langchain.com/langsmith/attach-user-feedback
 
 **Long session (3+ hours) — does anything degrade?**
 
-Sessions can be as long as needed. The only thing that moves inside the pipeline is the trigger text and the last 10000 words from the session. 
+Sessions can be as long as needed. The only thing that moves inside the pipeline is the trigger text and the last 10000 words from the session.
 
 The core idea here is that flex would be continuously processing data and hence would've distilled everything important into the fact or todo store.
 
@@ -176,6 +176,7 @@ This also highlights how I'd like to approach applied AI here, in the sense that
 **What would you fix with another week?**
 
 #### One week
+
 1. Adding live transcription using the newly release Mistral models.
 
 2. Add entities like people, work (repository), team or some grouping that is grounded.
@@ -183,6 +184,7 @@ This also highlights how I'd like to approach applied AI here, in the sense that
 3. Creating more scenarios for evals.
 
 #### Further improvements
+
 1. Adding a grouping behaviour using “tags” (not embeddings) that allows the model to group things (very big nitpick)
 
 2. Having the ability to steer the behaviour of the pipeline. Currently it’s tuned to how we want it, although user preferences might differ, we should have some UX around having feedback that changes things only for a user.\
@@ -195,11 +197,10 @@ _Controlling the user experience would the riskiest._
 
 The pipeline stores a lot of information as facts and todos without a strict steering mechanism. If a user was to be onboarded to both freewrite and daemon, they'd see massive amounts of todos from all data sources.
 
-This would be overwhelming from a UX perspective & does mean that the initial reaction of the user might be to turn it off. 
+This would be overwhelming from a UX perspective & does mean that the initial reaction of the user might be to turn it off.
 
 I currently haven't found the right UX for setting the threshold of how much of user's data gets converted to a todo.
 
 Personally, I wouldn't want a message from my partner that goes like, "Can we go out to this restaurant on Saturday" to turn into a todo, but I could bet that there's a class of user who'd expect that.
 
 We must have thorough discussions on how this steering would work from a UX and a data storage & user disclosure perspective.
-
