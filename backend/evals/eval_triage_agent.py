@@ -56,6 +56,7 @@ def _evaluate_once(scenario: dict) -> dict[str, bool]:
 
     def fake_save_fact(fact_item, tags=None, user_id=None):
         recorded_actions.append(("save_fact", {
+            "fact_id": fact_item.id,
             "fact": fact_item.fact,
             "category": fact_item.category,
             "tags": tags or fact_item.tags,
@@ -83,7 +84,17 @@ def _evaluate_once(scenario: dict) -> dict[str, bool]:
 
     checks = {}
 
-    checks["action"] = final_action == expected["action"]
+    # Both save_fact and update_fact tools call _save_fact, so recorded action is
+    # always "save_fact". Distinguish by checking if fact_id matches an expected
+    # fixture (update_fact) or is a fresh UUID (save_fact).
+    if final_action == "save_fact" and expected["action"] == "update_fact":
+        expected_fact_id = expected.get("args_contain", {}).get("fact_id")
+        checks["action"] = (
+            expected_fact_id is not None
+            and final_args.get("fact_id") == fixture_id(expected_fact_id)
+        )
+    else:
+        checks["action"] = final_action == expected["action"]
 
     if "args_contain" in expected:
         for key, expected_val in expected["args_contain"].items():
@@ -94,8 +105,8 @@ def _evaluate_once(scenario: dict) -> dict[str, bool]:
                 for kw in expected_val:
                     checks[f"arg_{key}_{kw}"] = kw.lower() in actual_str
             else:
-                # Convert fixture short IDs (e.g. "t3") to UUIDs for todo_id
-                compare_val = fixture_id(expected_val) if key == "todo_id" else str(expected_val)
+                # Convert fixture short IDs (e.g. "t3", "f4") to UUIDs for todo_id/fact_id
+                compare_val = fixture_id(expected_val) if key in ("todo_id", "fact_id") else str(expected_val)
                 checks[f"arg_{key}"] = str(actual_val) == compare_val
 
     if "args_null" in expected:

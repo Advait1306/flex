@@ -115,3 +115,20 @@ groups:
           context: "waitlist for felix"
         expect:
           action: do_nothing
+
+      - id: update_existing_fact
+        item:
+          text: "SuperMemory pricing is $20/month, might switch to self-hosted Qdrant sooner"
+          context: ""
+        expect:
+          action: update_fact
+          args_contain:
+            fact_id: "f4"
+            fact: ["SuperMemory"]
+
+      - id: no_duplicate_fact
+        item:
+          text: "We use SuperMemory for vector and graph storage"
+          context: ""
+        expect:
+          action: do_nothing

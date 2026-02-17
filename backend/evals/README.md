@@ -25,6 +25,9 @@ uv run python -m evals.run --component triage
 
 # 4. Control runs per scenario (default: 3)
 uv run python -m evals.run --runs 5
+
+# 5. Set logging level for debugging (default: error)
+uv run python -m evals.run --component triage --scenario no_duplicate --log-level info
 ```
 
 ## Components
