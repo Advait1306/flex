@@ -60,6 +60,7 @@ See [docs/daemon.md](docs/daemon.md) for details on app categories, extraction s
 - [Architecture](docs/architecture.md) — system design, data flow, and storage layout
 - [Daemon](docs/daemon.md) — macOS daemon extraction strategies and change detection
 - [Evals](docs/eval.md) — AI pipeline evaluation framework
+- [Production Readiness](docs/production_readiness.md) — deployment checklist and infrastructure requirements
 
 ## API Endpoints
 

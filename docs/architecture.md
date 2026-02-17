@@ -23,7 +23,7 @@ Data persists to `storage/` (gitignored).
 
 ### Entry Point (`main.py`)
 
-FastAPI app with async lifespan: initializes Tortoise ORM + Qdrant collections on startup. Registers four routers and CORS middleware.
+FastAPI app with async lifespan: initializes Tortoise ORM + Qdrant collections on startup. Registers six routers (auth, daemon, freewrite, todos, facts, transcription) and CORS middleware.
 
 ### Authentication (`auth.py`)
 
@@ -46,6 +46,7 @@ Todos and facts live in Qdrant, not Postgres.
 
 | Endpoint                     | Method | Description                                       |
 | ---------------------------- | ------ | ------------------------------------------------- |
+| `/api/auth/check`            | GET    | Validate auth token                               |
 | `/api/freewrite`             | GET    | Load freewrite content                            |
 | `/api/freewrite`             | PUT    | Save content, compute diff, trigger AI pipeline   |
 | `/api/todos`                 | GET    | List all todos                                    |
@@ -55,30 +56,41 @@ Todos and facts live in Qdrant, not Postgres.
 | `/api/todos/{id}`            | DELETE | Delete a todo                                     |
 | `/api/facts`                 | GET    | List all facts (read-only, created by AI)         |
 | `/api/transcription/session` | POST   | Get ephemeral OpenAI token for voice transcription |
+| `/api/daemon/snapshot`       | POST   | Receive daemon accessibility tree snapshot        |
 
 ### AI Agent Pipeline (`ai/`)
 
-Two-stage pipeline triggered when freewrite content changes:
+Two input paths feed into a shared triage stage:
 
-**Stage 1: Freewrite Processor** (`ai/agents/freewrite_processor_agent.py`)
+**Path A: Freewrite Processor** (`ai/agents/freewrite_processor_agent.py`)
 - Takes trigger text (newly typed text) + document context
 - Uses LLM structured output to extract actionable items as `TriagePayload` objects
+- Identifies subjects — when trigger mentions multiple subjects, extracts separate items for each
 - Filters noise (greetings, gibberish, single characters)
 - Fans out to triage agents via `asyncio.gather()`
 
-**Stage 2: Triage Agent** (`ai/agents/triage_agent.py`)
+**Path B: Daemon Processor** (`ai/agents/daemon_processor_agent.py`)
+- Takes accessibility tree snapshots from the macOS daemon (app name, category, content)
+- Extracts signal from UI tree: action items, decisions, status updates, commitments
+- Filters UI chrome (buttons, links, timestamps, generic layout text)
+- Groups by subject and fans out to the same triage agents
+
+**Triage Agent** (`ai/agents/triage_agent.py`)
 - Processes one extracted item at a time via a tool-calling loop (max 5 iterations)
-- Has six tools: `search_todos`, `search_facts`, `create_todo`, `update_todo`, `save_fact`, `do_nothing`
+- Has seven tools: `search_todos`, `search_facts`, `create_todo`, `update_todo`, `save_fact`, `update_fact`, `do_nothing`
 - Always searches before acting to avoid duplicates
-- Decides: status change, new todo, update existing todo description, save as fact, or do nothing
+- Status-only changes (complete, cancel, etc.) update only `status` and `tags` — never touch `title` or `description`
+- Decides: status change, new todo, update existing todo, save new fact, update existing fact, or do nothing
 
 **Queue Manager** (`ai/queue_manager.py`)
 - Singleton async queue ensuring pipeline triggers are processed serially
+- Supports two trigger types: `freewrite` (from editor saves) and `daemon` (from app snapshots)
 - Prevents race conditions from rapid successive saves
 
 **LLM Config** (`ai/config.py`)
 - All LLM and embedding calls routed through OpenRouter
 - Default model: `openai/gpt-5-mini`, temperature 0.1
+- Configurable provider switching via `PROVIDER` env var (e.g. `cerebras` routes to `openai/gpt-oss-120b` with provider pinning)
 
 ### Storage Layer (`store/`)
 
@@ -103,7 +115,9 @@ Next.js 16, React 19, BlockNote editor, Tailwind CSS v4, SWR, Axios, Radix UI / 
 
 Two-panel split:
 - **Left**: BlockNote editor + voice input button
-- **Right**: Tabbed sidebar with Todos and Facts lists
+- **Right**: Fixed 500px tabbed sidebar with Todos and Facts lists
+
+Todos render as expandable cards with nested children (via `parent_id`), color-coded status badges, and sorted by most recent update. Facts render as expandable cards with category badges (color-coded by type) and tag pills.
 
 ### Block Editor (`components/editor/BlockEditor.tsx`)
 
@@ -113,13 +127,15 @@ Minimal BlockNote editor (no menus, no toolbar — just text input). Smart auto-
 
 1. Backend issues ephemeral OpenAI token (`POST /api/transcription/session`)
 2. Frontend opens WebSocket directly to OpenAI Realtime API
-3. Mic audio captured at 24kHz, converted to PCM16/Base64, sent via WebSocket
+3. Mic audio captured at 24kHz via ScriptProcessor, converted to PCM16/Base64, sent via WebSocket
 4. OpenAI handles VAD + transcription server-side (`gpt-4o-transcribe`)
 5. Completed transcription inserted into editor, triggering the save → AI pipeline flow
 
+Voice button shows multi-state feedback: amber pulse while connecting, green pulse while speaking, blue while transcribing.
+
 ### Auth (`components/AuthGate.tsx`)
 
-Login form → Base64-encodes credentials → stores in sessionStorage → Axios interceptor attaches `Authorization: Basic` header on every request.
+Login form → Base64-encodes credentials → stores in sessionStorage → Axios interceptor attaches `Authorization: Basic` header on every request. User menu (bottom-right) shows username initial and provides logout.
 
 ### Data Fetching
 
@@ -153,4 +169,15 @@ Mic button clicked
   → audio streamed, VAD + transcription server-side
   → transcription inserted into BlockEditor
     → same flow as text input above
+```
+
+### Daemon Snapshot → Todos/Facts
+
+```
+macOS daemon captures app accessibility tree
+  → POST /api/daemon/snapshot
+    → enqueue daemon PipelineTrigger
+      → Daemon Processor extracts signal from UI tree via LLM
+        → fan out to Triage Agents (one per item)
+          → same triage flow as above
 ```
