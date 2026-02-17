@@ -28,25 +28,25 @@ Recommended reading - https://openrouter.ai/docs/guides/routing/provider-selecti
 
 **What happens if the daemon crashes mid-session? Does it recover cleanly?**
 
-While we can have mechanisms to internally handle errors, crashes are to be taken as inevitable. Hence we should not depend on internal machinary to recover from it. Instead we depend on the OS.
+While we can have mechanisms to internally handle errors, crashes are to be taken as inevitable. Hence we should not depend on internal machinery to recover from it. Instead we depend on the OS.
 
 MacOS allows this via `launchd` & `SMAppService`. More reading is required on this in order to get a deeper understanding.
 
 > This isn't configured in the current application due to it's proof of concept nature and quicker testing requirements. Which involve killing the application on a regular basis.
 
-### Observibility
+### Observability
 
 **Can you see what the daemon is filtering vs sending to the LLM?**
 
-The way our current daemon pre-filtering works is hash based. In the scenario where the daemon chooses not to send data to our pipeline gurantees that it's a duplicate. Which means the same data has already been sent once.
+The way our current daemon pre-filtering works is hash based. In the scenario where the daemon chooses not to send data to our pipeline guarantees that it's a duplicate. Which means the same data has already been sent once.
 
-In cases where we add a classifer based pre-filter, we can add test time tracing with a logging framework.
+In cases where we add a classifier based pre-filter, we can add test time tracing with a logging framework.
 
 I would highly recommend against a production logging or tracing setup at this layer due to the sheer volume of data that'd be generated & user privacy concerns.
 
 **Can you trace why a specific action item was or wasn't extracted?**
 
-Yes, every step throught the extraction and triage pipeline is traced via Langsmith. These traces are recorded for every run and contain detailed inputs and outputs.
+Yes, every step through the extraction and triage pipeline is traced via Langsmith. These traces are recorded for every run and contain detailed inputs and outputs.
 
 ![Langsmith Tracing](images/langsmith_tracing.png)
 
@@ -68,7 +68,7 @@ Annotations can also be made on every block which would then be used as feedback
 
 The architecture of our pipeline extracts all information from a sources and sends high quality intent and context data to the triage agent. So linking two items across sources isn't really a thing. It's just linking
 
-As mentioned above, we can see details of what the triage agent searched for, and what these search results returned. Although there aren't currently any interpretibility tools that'll allows to understand why the LLM chose to link / not link two sources.
+As mentioned above, we can see details of what the triage agent searched for, and what these search results returned. Although there aren't currently any interpretability tools that'll allows to understand why the LLM chose to link / not link two sources.
 
 A certain level of analysis can be drawn by taking examples and creating multiple eval examples of it and checking what's being linked and what's not.
 
@@ -110,7 +110,7 @@ For the applications that're being observed, we get accessibility tree data that
 
 We have two collections in the vector store. `Facts` and `Todos`. 
 
-Facts contain data that can be used later to form todos. This involves preferences, updates, or any infromation that's provided without an intent. 
+Facts contain data that can be used later to form todos. This involves preferences, updates, or any information that's provided without an intent. 
 
 Todos contain data on intent that the user has shown about getting something done. While creating these facts are searched to enrich with prior context. 
 
@@ -120,7 +120,7 @@ Other than these two pieces of information, everything else that enters the pipe
 
 The current APIs don't allow for this, although we could add a source parameter on actions which would allow them to find out what had been sent. 
 
-User based audting is a problem because our ingest pipeline has a terrible singal to noise ratio. Hence, we could have the ability to audit actions which link back to their triggers.
+User based auditing is a problem because our ingest pipeline has a terrible signal to noise ratio. Hence, we could have the ability to audit actions which link back to their triggers.
 
 ### Edge cases
 
@@ -130,12 +130,12 @@ This is alright, the transcriptions get generated as VAD triggers a close. The i
 
 **App crashes or becomes unresponsive while daemon is observing**
 
-This hasn't been tested, nor am I fully sure on how this would be tested. Although the current single threaded nature of our daemon means that we also get stuck while trying to retrive the AX tree of the application.
+This hasn't been tested, nor am I fully sure on how this would be tested. Although the current single threaded nature of our daemon means that we also get stuck while trying to retrieve the AX tree of the application.
 
 This can be solved in two ways:
 
-1. Add timeout on application AX tree retrivals to 3-5 secs (shouldn't take more)
-2. Do the retrival on seperate threads so one application doesn't slow down the process for other applications.
+1. Add timeout on application AX tree retrievals to 3-5 secs (shouldn't take more)
+2. Do the retrieval on separate threads so one application doesn't slow down the process for other applications.
 
 **Two action items from different sources that are actually the same task but worded differently**
 
@@ -163,13 +163,13 @@ The core idea here is that flex would be continuously processing data and hence 
 
 In a 3+ hour long session we'd only be processing data from a small window at the end. Hence, degradation wouldn't be a problem on inputs of any length.
 
-> This does mean that our sessions are theoritically lossy in nature. Something you said 1 hour ago in a dense enough session isn't being given to the pipeline. This requires that our fact and todo triage is up to the mark that important information is always captured. This is a known tradeoff that we're actively making.
+> This does mean that our sessions are theoretically lossy in nature. Something you said 1 hour ago in a dense enough session isn't being given to the pipeline. This requires that our fact and todo triage is up to the mark that important information is always captured. This is a known tradeoff that we're actively making.
 
 ### Known Limitations
 
 **What doesn't work yet?**
 
-Everything technically works, with the caveat that everything can be greatly improved. My entire appraoch with the project was to show that given certain circumstances this is possible to do.
+Everything technically works, with the caveat that everything can be greatly improved. My entire approach with the project was to show that given certain circumstances this is possible to do.
 
 This also highlights how I'd like to approach applied AI here, in the sense that we get to a pipeline that technically does what we need it to in a happy flow & then spend time breaking it in multiple ways, collecting traces and improving it.
 
@@ -193,7 +193,7 @@ This also highlights how I'd like to approach applied AI here, in the sense that
 
 _Controlling the user experience would the riskiest._
 
-The pipeline stores a lot of information as facts and todos without a strict streeing mechanism. If a user was to be onboarded to both freewrite and daemon, they'd see massive amounts of todos from all data sources.
+The pipeline stores a lot of information as facts and todos without a strict steering mechanism. If a user was to be onboarded to both freewrite and daemon, they'd see massive amounts of todos from all data sources.
 
 This would be overwhelming from a UX perspective & does mean that the initial reaction of the user might be to turn it off. 
 
