@@ -44,6 +44,11 @@ def _evaluate_once(scenario: dict) -> dict[str, bool]:
         for keyword in expected["items_contain"]:
             checks[f"contains_{keyword}"] = keyword.lower() in all_text
 
+    if "all_items_have_context" in expected and expected["all_items_have_context"]:
+        checks["all_items_have_context"] = all(
+            item.context.strip() for item in result
+        )
+
     if "context_contains" in expected:
         all_context = " ".join(item.context for item in result).lower()
         for keyword in expected["context_contains"]:

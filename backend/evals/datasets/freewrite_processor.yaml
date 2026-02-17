@@ -75,3 +75,40 @@ groups:
           action: triage
           min_items: 1
           items_contain: ["brand", "blue"]
+
+  - name: multi_subject
+    scenarios:
+      - id: two_subjects_blocking
+        trigger: "Before I complete PR 32 I need to complete ASEE-8 as it's blocked on that"
+        document_context: "Before I complete PR 32 I need to complete ASEE-8 as it's blocked on that"
+        expect:
+          action: triage
+          min_items: 2
+          items_contain: ["PR 32", "ASEE-8"]
+          all_items_have_context: true
+
+      - id: two_subjects_dependency
+        trigger: "can't launch the redesign until we finish the API migration"
+        document_context: ""
+        expect:
+          action: triage
+          min_items: 2
+          items_contain: ["redesign", "API migration"]
+          all_items_have_context: true
+
+      - id: two_subjects_sequential
+        trigger: "finish the backend tests then start on the mobile app"
+        document_context: ""
+        expect:
+          action: triage
+          min_items: 2
+          items_contain: ["backend tests", "mobile app"]
+
+      - id: two_intents_same_subject
+        trigger: "also need to set up CI for it and get design approval"
+        document_context: "payments service rewrite"
+        expect:
+          action: triage
+          min_items: 1
+          items_contain: ["CI", "design approval"]
+          context_contains: ["payments"]

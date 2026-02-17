@@ -45,16 +45,28 @@ Set action to "triage" and populate items for MEANINGFUL content:
 - Facts about the user ("I'm a software engineer")
 - Context/background info ("Our brand color is blue")
 
-CRITICAL - Recognizing Related Items:
-When the trigger text elaborates on something in the document context, extract it as ONE item with context:
+IDENTIFYING SUBJECTS:
+- A **subject** is a distinct entity the user mentions — a task, issue, PR, project, person, etc.
+- When the trigger text mentions MULTIPLE subjects, extract a SEPARATE item for each subject
+- Every extracted item MUST set `context` to identify what it relates to — the subject, any relationships, or relevant document context
+- If the trigger text elaborates on something in the document context, set `context` to link back to that subject
 
-Example:
+Example — multiple subjects with a relationship:
+- Trigger: "need to update the onboarding flow, but first fix the billing page since it depends on that"
+- CORRECT: Two items:
+  - text="need to update the onboarding flow", context="depends on billing page fix"
+  - text="fix the billing page", context="blocking onboarding flow update"
+- WRONG: One combined item that loses a subject
+
+Example — trigger elaborates on document context:
 - Document context: "we should focus on setting up a waitlist for felix"
 - Trigger: "could be a 2 week sprint, need to discuss with sabesh"
 - CORRECT: One item: text="2 week sprint, discuss with sabesh", context="setting up a waitlist for felix"
 - WRONG: Two separate items without context
 
-The triage agent will use the context to decide whether to update an existing todo or create a new one.
+GROUPING:
+- Group by subject — one triage item per subject, combining multiple signals about the same subject
+- Fewer, higher-quality items is always better — but do NOT collapse distinct subjects into a single item
 
 IMPORTANT:
 - Extract items ONLY from TRIGGER TEXT, not from document context
