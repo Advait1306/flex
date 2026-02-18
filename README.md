@@ -1,6 +1,6 @@
 # Flex
 
-AI-powered task management with voice input and ambient context capture.
+A continuous signal processing pipeline that processes input from users and their devices to extract items for triage.
 
 ## Project Structure
 
@@ -18,6 +18,13 @@ flex/
 ## Prerequisites
 
 - Docker must be running before starting the app
+- Create `.env` files from the examples before running:
+  ```bash
+  cp frontend/.env.example frontend/.env
+  cp backend/.env.example backend/.env
+  cp daemon/.env.example daemon/.env
+  ```
+  In `backend/.env`, pick one LLM provider — Cerebras with `gpt-oss-120b` for realtime pipeline speed, or OpenAI `gpt-5-mini` as default.
 
 ## Quick Start
 

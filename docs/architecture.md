@@ -1,6 +1,6 @@
 # Flex Architecture
 
-Flex is an AI-powered task and knowledge management app built around freewriting. Users type or dictate stream-of-consciousness text into a block editor; the system automatically extracts actionable todos and user facts using an LLM agent pipeline.
+Flex is a continuous signal processing pipeline that ingests input from users and their devices, extracts actionable items, and triages them using LLM agents. Input sources include a freewrite editor (typed or dictated text), voice transcription, and a macOS daemon that captures ambient context from running apps.
 
 **Stack**: Next.js frontend + FastAPI backend + LangChain agents + Qdrant (vector search) + PostgreSQL
 
@@ -147,37 +147,59 @@ SWR with 500ms polling for todos and facts. Freewrite content loaded on mount.
 
 ### Text → Todos/Facts
 
-```
-User types in BlockEditor
-  → auto-save calls PUT /api/freewrite
-    → compute diff (old vs new text)
-    → save to Postgres
-    → enqueue PipelineTrigger
-      → Freewrite Processor extracts items via LLM
-        → fan out to Triage Agents (one per item)
-          → search existing todos/facts
-          → create_todo / update_todo / save_fact / do_nothing
-            → writes to Qdrant
+```mermaid
+flowchart TD
+    A[User types in BlockEditor] --> B[Auto-save calls PUT /api/freewrite]
+    B --> C[Compute diff — old vs new text]
+    C --> D[Save to Postgres]
+    D --> E[Enqueue PipelineTrigger]
+    E --> F[Freewrite Processor extracts items via LLM]
+    F --> G[Fan out to Triage Agents — one per item]
+    G --> H[Search existing todos/facts in Qdrant]
+    H --> I{Decide action}
+    I --> J[create_todo]
+    I --> K[update_todo]
+    I --> L[save_fact]
+    I --> M[update_fact]
+    I --> N[do_nothing]
 ```
 
 ### Voice → Text → Todos/Facts
 
-```
-Mic button clicked
-  → get ephemeral OpenAI token
-  → WebSocket to OpenAI Realtime API
-  → audio streamed, VAD + transcription server-side
-  → transcription inserted into BlockEditor
-    → same flow as text input above
+```mermaid
+flowchart TD
+    A[Mic button clicked] --> B[Get ephemeral OpenAI token]
+    B --> C[Open WebSocket to OpenAI Realtime API]
+    C --> D[Stream audio, VAD + transcription server-side]
+    D --> E[Transcription inserted into BlockEditor]
+    E --> F[Auto-save calls PUT /api/freewrite]
+    F --> G[Compute diff — old vs new text]
+    G --> H[Save to Postgres]
+    H --> I[Enqueue PipelineTrigger]
+    I --> J[Freewrite Processor extracts items via LLM]
+    J --> K[Fan out to Triage Agents — one per item]
+    K --> L[Search existing todos/facts in Qdrant]
+    L --> M{Decide action}
+    M --> N[create_todo]
+    M --> O[update_todo]
+    M --> P[save_fact]
+    M --> Q[update_fact]
+    M --> R[do_nothing]
 ```
 
 ### Daemon Snapshot → Todos/Facts
 
-```
-macOS daemon captures app accessibility tree
-  → POST /api/daemon/snapshot
-    → enqueue daemon PipelineTrigger
-      → Daemon Processor extracts signal from UI tree via LLM
-        → fan out to Triage Agents (one per item)
-          → same triage flow as above
+```mermaid
+flowchart TD
+    A[macOS daemon captures app accessibility tree] --> B[POST /api/daemon/snapshot]
+    B --> C[Enqueue daemon PipelineTrigger]
+    C --> D[Daemon Processor extracts signal from UI tree via LLM]
+    D --> E[Fan out to Triage Agents — one per item]
+    E --> F[Search existing todos/facts in Qdrant]
+    F --> G{Decide action}
+    G --> H[create_todo]
+    G --> I[update_todo]
+    G --> J[save_fact]
+    G --> K[update_fact]
+    G --> L[do_nothing]
 ```

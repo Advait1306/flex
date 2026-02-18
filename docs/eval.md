@@ -42,7 +42,7 @@ Tests `search_todos()` and `search_facts()` retrieval quality against fixture da
 - `includes_<id>` — is a specific item in the results?
 - `excludes_<id>` — is a specific item absent from the results?
 
-**Deterministic** — defaults to 1 run since embeddings are pre-computed and Qdrant search is deterministic.
+**Deterministic** — embeddings are pre-computed and Qdrant search is deterministic, so multiple runs will produce identical results.
 
 ### 3. Triage Agent (`eval_triage_agent.py`)
 
@@ -129,7 +129,7 @@ Groups with no `fixtures` key create empty Qdrant collections (cold-start testin
 
 ## Multi-Run Strategy
 
-LLM outputs are non-deterministic, so freewrite, triage, and daemon evals default to 3 runs per scenario. A scenario passes only if ALL checks pass in ALL runs. Search defaults to 1 run (deterministic).
+LLM outputs are non-deterministic, so all evals default to 3 runs per scenario. A scenario passes only if ALL checks pass in ALL runs. Search is deterministic (pre-computed embeddings), so multiple runs produce identical results.
 
 Output shows per-run pass/fail:
 
