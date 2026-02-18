@@ -29,6 +29,7 @@ export const BlockEditor = forwardRef<BlockEditorHandle, BlockEditorProps>(
   function BlockEditor({ initialContent, onChange, onFocus }, ref) {
     const saveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
     const lastContentRef = useRef<string>("");
+    const activeBlockIdRef = useRef<string | null>(null);
 
     const editor = useCreateBlockNote({
       initialContent: initialContent?.length ? initialContent : undefined,
@@ -50,15 +51,48 @@ export const BlockEditor = forwardRef<BlockEditorHandle, BlockEditorProps>(
       ref,
       () => ({
         insertText: (text: string) => {
-          const blocks = editor.document;
-          const lastBlock = blocks[blocks.length - 1];
-          const existingContent = Array.isArray(lastBlock.content)
-            ? lastBlock.content
-            : [];
-          editor.updateBlock(lastBlock, {
-            content: [...existingContent, { type: "text", text: text + " ", styles: {} }],
-          });
-          save();
+          // Empty string = claim a new block for this voice session
+          if (!text) {
+            const blocks = editor.document;
+            const lastBlock = blocks[blocks.length - 1];
+            const isEmpty =
+              !Array.isArray(lastBlock.content) ||
+              lastBlock.content.length === 0 ||
+              lastBlock.content.every(
+                (item) => item.type === "text" && !("text" in item && item.text.trim())
+              );
+
+            if (isEmpty) {
+              activeBlockIdRef.current = lastBlock.id;
+            } else {
+              editor.insertBlocks([{ type: "paragraph" }], lastBlock, "after");
+              const newBlocks = editor.document;
+              activeBlockIdRef.current = newBlocks[newBlocks.length - 1].id;
+            }
+            return;
+          }
+
+          // No active block yet — claim one (fallback if called without empty-string init)
+          if (!activeBlockIdRef.current || !editor.document.find((b) => b.id === activeBlockIdRef.current)) {
+            const blocks = editor.document;
+            const lastBlock = blocks[blocks.length - 1];
+            activeBlockIdRef.current = lastBlock.id;
+          }
+
+          // Append text to the active block's single text node
+          const block = editor.document.find((b) => b.id === activeBlockIdRef.current)!;
+          const existing = Array.isArray(block.content) ? block.content : [];
+          const last = existing[existing.length - 1];
+
+          if (last && last.type === "text" && "text" in last) {
+            const updated = [...existing];
+            updated[updated.length - 1] = { ...last, text: last.text + text };
+            editor.updateBlock(block, { content: updated });
+          } else {
+            editor.updateBlock(block, {
+              content: [...existing, { type: "text", text, styles: {} }],
+            });
+          }
         },
         focus: () => {
           editor.focus();

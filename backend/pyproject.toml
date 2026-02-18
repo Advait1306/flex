@@ -10,6 +10,7 @@ dependencies = [
     "httpx>=0.28.1",
     "langchain>=1.2.7",
     "langchain-openai>=1.1.7",
+    "mistralai[realtime]>=1.12.3",
     "python-dotenv>=1.2.1",
     "pyyaml>=6.0.3",
     "qdrant-client>=1.9.0",

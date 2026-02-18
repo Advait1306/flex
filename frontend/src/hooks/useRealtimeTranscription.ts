@@ -1,5 +1,7 @@
 import { useState, useRef, useCallback, useEffect } from "react";
-import { api } from "@/lib/axios";
+import { getAuth } from "@/lib/auth";
+
+export type MicState = "off" | "connecting" | "on" | "speaking";
 
 interface UseRealtimeTranscriptionOptions {
   onTranscript?: (text: string) => void;
@@ -8,16 +10,15 @@ interface UseRealtimeTranscriptionOptions {
 }
 
 interface UseRealtimeTranscriptionReturn {
-  isListening: boolean;
-  isSpeaking: boolean;
-  isTranscribing: boolean;
-  isConnecting: boolean;
+  micState: MicState;
   error: string | null;
   startListening: () => Promise<void>;
   stopListening: () => void;
 }
 
-const SAMPLE_RATE = 24000;
+const SAMPLE_RATE = 16000;
+const RMS_THRESHOLD = 0.015;
+const SILENCE_TIMEOUT_MS = 600;
 
 function floatTo16BitPCM(float32Array: Float32Array): ArrayBuffer {
   const buffer = new ArrayBuffer(float32Array.length * 2);
@@ -29,13 +30,12 @@ function floatTo16BitPCM(float32Array: Float32Array): ArrayBuffer {
   return buffer;
 }
 
-function arrayBufferToBase64(buffer: ArrayBuffer): string {
-  const bytes = new Uint8Array(buffer);
-  let binary = "";
-  for (let i = 0; i < bytes.byteLength; i++) {
-    binary += String.fromCharCode(bytes[i]);
+function computeRMS(float32Array: Float32Array): number {
+  let sum = 0;
+  for (let i = 0; i < float32Array.length; i++) {
+    sum += float32Array[i] * float32Array[i];
   }
-  return btoa(binary);
+  return Math.sqrt(sum / float32Array.length);
 }
 
 export function useRealtimeTranscription(
@@ -43,17 +43,16 @@ export function useRealtimeTranscription(
 ): UseRealtimeTranscriptionReturn {
   const { onTranscript, onSpeechStart, onSpeechEnd } = options;
 
-  const [isListening, setIsListening] = useState(false);
-  const [isSpeaking, setIsSpeaking] = useState(false);
-  const [isTranscribing, setIsTranscribing] = useState(false);
-  const [isConnecting, setIsConnecting] = useState(false);
+  const [micState, setMicState] = useState<MicState>("off");
   const [error, setError] = useState<string | null>(null);
 
   const wsRef = useRef<WebSocket | null>(null);
   const audioContextRef = useRef<AudioContext | null>(null);
   const sourceRef = useRef<MediaStreamAudioSourceNode | null>(null);
-  const processorRef = useRef<AudioWorkletNode | null>(null);
+  const processorRef = useRef<ScriptProcessorNode | null>(null);
   const streamRef = useRef<MediaStream | null>(null);
+  const isSpeakingRef = useRef(false);
+  const silenceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const onTranscriptRef = useRef(onTranscript);
   const onSpeechStartRef = useRef(onSpeechStart);
@@ -66,6 +65,10 @@ export function useRealtimeTranscription(
   }, [onTranscript, onSpeechStart, onSpeechEnd]);
 
   const cleanup = useCallback(() => {
+    if (silenceTimerRef.current) {
+      clearTimeout(silenceTimerRef.current);
+      silenceTimerRef.current = null;
+    }
     if (processorRef.current) {
       processorRef.current.disconnect();
       processorRef.current = null;
@@ -86,68 +89,54 @@ export function useRealtimeTranscription(
       wsRef.current.close();
       wsRef.current = null;
     }
-    setIsListening(false);
-    setIsSpeaking(false);
-    setIsTranscribing(false);
-    setIsConnecting(false);
+    isSpeakingRef.current = false;
+    setMicState("off");
   }, []);
 
   const startListening = useCallback(async () => {
-    if (isListening || isConnecting) return;
+    if (micState !== "off") return;
 
     setError(null);
-    setIsConnecting(true);
+    setMicState("connecting");
 
     try {
-      // 1. Get ephemeral token from backend
-      const { data } = await api.post("/api/transcription/session");
-      const { client_secret } = data;
+      const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
+      const wsBase = apiUrl.replace(/^http/, "ws");
+      const token = getAuth();
+      if (!token) {
+        throw new Error("Not authenticated");
+      }
 
-      // 2. Open WebSocket to OpenAI
       const ws = new WebSocket(
-        "wss://api.openai.com/v1/realtime?intent=transcription",
-        [
-          "realtime",
-          `openai-insecure-api-key.${client_secret.value}`,
-          "openai-beta.realtime-v1",
-        ]
+        `${wsBase}/api/transcription/ws?token=${encodeURIComponent(token)}`
       );
       wsRef.current = ws;
 
       await new Promise<void>((resolve, reject) => {
         ws.onopen = () => resolve();
         ws.onerror = () => reject(new Error("WebSocket connection failed"));
-        const timeout = setTimeout(() => reject(new Error("Connection timeout")), 10000);
-        ws.addEventListener("open", () => clearTimeout(timeout), { once: true });
+        const timeout = setTimeout(
+          () => reject(new Error("Connection timeout")),
+          10000
+        );
+        ws.addEventListener("open", () => clearTimeout(timeout), {
+          once: true,
+        });
       });
 
-      // 3. Handle incoming messages
       ws.onmessage = (event) => {
         const msg = JSON.parse(event.data);
 
         switch (msg.type) {
-          case "input_audio_buffer.speech_started":
-            setIsSpeaking(true);
-            setIsTranscribing(false);
-            onSpeechStartRef.current?.();
-            break;
-
-          case "input_audio_buffer.speech_stopped":
-            setIsSpeaking(false);
-            setIsTranscribing(true);
-            onSpeechEndRef.current?.();
-            break;
-
-          case "conversation.item.input_audio_transcription.completed":
-            setIsTranscribing(false);
-            if (msg.transcript?.trim()) {
-              onTranscriptRef.current?.(msg.transcript.trim());
+          case "transcription.text.delta":
+            if (msg.text) {
+              onTranscriptRef.current?.(msg.text);
             }
             break;
 
           case "error":
-            console.error("OpenAI Realtime error:", msg.error);
-            setError(msg.error?.message || "Transcription error");
+            console.error("Transcription error:", msg.message);
+            setError(msg.message || "Transcription error");
             break;
         }
       };
@@ -161,7 +150,6 @@ export function useRealtimeTranscription(
         cleanup();
       };
 
-      // 4. Capture microphone audio
       const stream = await navigator.mediaDevices.getUserMedia({
         audio: {
           sampleRate: SAMPLE_RATE,
@@ -175,8 +163,6 @@ export function useRealtimeTranscription(
       const audioContext = new AudioContext({ sampleRate: SAMPLE_RATE });
       audioContextRef.current = audioContext;
 
-      // Create a ScriptProcessor to capture audio chunks
-      // (AudioWorklet would be cleaner but requires a separate file)
       const source = audioContext.createMediaStreamSource(stream);
       sourceRef.current = source;
 
@@ -184,27 +170,45 @@ export function useRealtimeTranscription(
       processor.onaudioprocess = (e) => {
         if (ws.readyState !== WebSocket.OPEN) return;
         const inputData = e.inputBuffer.getChannelData(0);
+
+        const rms = computeRMS(inputData);
+        if (rms > RMS_THRESHOLD) {
+          if (!isSpeakingRef.current) {
+            isSpeakingRef.current = true;
+            setMicState("speaking");
+            onSpeechStartRef.current?.();
+          }
+          if (silenceTimerRef.current) {
+            clearTimeout(silenceTimerRef.current);
+            silenceTimerRef.current = null;
+          }
+        } else if (isSpeakingRef.current) {
+          if (!silenceTimerRef.current) {
+            silenceTimerRef.current = setTimeout(() => {
+              isSpeakingRef.current = false;
+              setMicState("on");
+              onSpeechEndRef.current?.();
+              silenceTimerRef.current = null;
+            }, SILENCE_TIMEOUT_MS);
+          }
+        }
+
         const pcm16 = floatTo16BitPCM(inputData);
-        const base64 = arrayBufferToBase64(pcm16);
-        ws.send(JSON.stringify({
-          type: "input_audio_buffer.append",
-          audio: base64,
-        }));
+        ws.send(pcm16);
       };
 
       source.connect(processor);
       processor.connect(audioContext.destination);
-      processorRef.current = processor as unknown as AudioWorkletNode;
+      processorRef.current = processor;
 
-      setIsConnecting(false);
-      setIsListening(true);
+      setMicState("on");
     } catch (err) {
       console.error("Failed to start realtime transcription:", err);
       setError(err instanceof Error ? err.message : "Failed to start");
       cleanup();
       throw err;
     }
-  }, [isListening, isConnecting, cleanup]);
+  }, [micState, cleanup]);
 
   const stopListening = useCallback(() => {
     cleanup();
@@ -217,10 +221,7 @@ export function useRealtimeTranscription(
   }, [cleanup]);
 
   return {
-    isListening,
-    isSpeaking,
-    isTranscribing,
-    isConnecting,
+    micState,
     error,
     startListening,
     stopListening,
