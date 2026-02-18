@@ -75,43 +75,81 @@ def _evaluate_once(scenario: dict) -> dict[str, bool]:
         )
         triage_agent(item, user_id=0)
 
-    if recorded_actions:
-        final_action = recorded_actions[-1][0]
-        final_args = recorded_actions[-1][1]
-    else:
-        final_action = "do_nothing"
-        final_args = {}
-
     checks = {}
+    expected_action = expected["action"]
 
-    # Both save_fact and update_fact tools call _save_fact, so recorded action is
-    # always "save_fact". Distinguish by checking if fact_id matches an expected
-    # fixture (update_fact) or is a fresh UUID (save_fact).
-    if final_action == "save_fact" and expected["action"] == "update_fact":
+    # do_nothing: no mutating actions should have been recorded
+    if expected_action == "do_nothing":
+        checks["action"] = len(recorded_actions) == 0
+        return checks
+
+    # Mutating actions: scan ALL recorded_actions for matching entries.
+    # Both save_fact and update_fact tools call _save_fact, so recorded name is
+    # always "save_fact". Distinguish by checking if fact_id matches a fixture
+    # ID (update_fact) vs fresh UUID (save_fact).
+    if expected_action == "update_fact":
         expected_fact_id = expected.get("args_contain", {}).get("fact_id")
-        checks["action"] = (
-            expected_fact_id is not None
-            and final_args.get("fact_id") == fixture_id(expected_fact_id)
-        )
+        candidates = [
+            args for name, args in recorded_actions
+            if name == "save_fact"
+            and expected_fact_id is not None
+            and args.get("fact_id") == fixture_id(expected_fact_id)
+        ]
     else:
-        checks["action"] = final_action == expected["action"]
+        candidates = [
+            args for name, args in recorded_actions
+            if name == expected_action
+        ]
+
+    # Check args on each candidate; first one passing all checks wins
+    matched_args = None
+    for candidate_args in candidates:
+        ok = True
+
+        if "args_contain" in expected:
+            for key, expected_val in expected["args_contain"].items():
+                actual_val = candidate_args.get(key, "")
+                if isinstance(expected_val, list):
+                    actual_str = str(actual_val).lower()
+                    if not all(kw.lower() in actual_str for kw in expected_val):
+                        ok = False
+                        break
+                else:
+                    compare_val = fixture_id(expected_val) if key in ("todo_id", "fact_id") else str(expected_val)
+                    if str(actual_val) != compare_val:
+                        ok = False
+                        break
+
+        if ok and "args_null" in expected:
+            for key in expected["args_null"]:
+                if candidate_args.get(key) is not None:
+                    ok = False
+                    break
+
+        if ok:
+            matched_args = candidate_args
+            break
+
+    checks["action"] = matched_args is not None
+
+    # Report individual arg checks for diagnostics (use matched candidate,
+    # or first candidate if no full match, or empty dict if no candidates)
+    report_args = matched_args or (candidates[0] if candidates else {})
 
     if "args_contain" in expected:
         for key, expected_val in expected["args_contain"].items():
-            actual_val = final_args.get(key, "")
-
+            actual_val = report_args.get(key, "")
             if isinstance(expected_val, list):
                 actual_str = str(actual_val).lower()
                 for kw in expected_val:
                     checks[f"arg_{key}_{kw}"] = kw.lower() in actual_str
             else:
-                # Convert fixture short IDs (e.g. "t3", "f4") to UUIDs for todo_id/fact_id
                 compare_val = fixture_id(expected_val) if key in ("todo_id", "fact_id") else str(expected_val)
                 checks[f"arg_{key}"] = str(actual_val) == compare_val
 
     if "args_null" in expected:
         for key in expected["args_null"]:
-            checks[f"arg_{key}_null"] = final_args.get(key) is None
+            checks[f"arg_{key}_null"] = report_args.get(key) is None
 
     return checks
 
