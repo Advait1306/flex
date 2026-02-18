@@ -1,6 +1,6 @@
 groups:
   - name: small_baseline
-    fixtures: full
+    fixtures: small_baseline
     scenarios:
       - id: create_new_unrelated
         item:

@@ -55,7 +55,7 @@ evals/
 ├── eval_daemon_processor.py        # daemon snapshot extraction evaluator
 ├── datasets/
 │   ├── fixtures/                   # fixture sets (Qdrant data)
-│   │   ├── full.yaml               # small baseline (5 todos, 4 facts)
+│   │   ├── small_baseline.yaml     # small baseline (5 todos, 4 facts)
 │   │   └── startup_founder.yaml    # large-scale (100 todos, 200 facts)
 │   ├── freewrite_processor.yaml    # freewrite test scenarios
 │   ├── freewrite_inputs/           # long-form document files for sliding window evals
@@ -65,7 +65,7 @@ evals/
 │   ├── daemon_processor.yaml       # daemon test scenarios
 │   └── daemon_inputs/              # accessibility tree dumps (Linear, Slack)
 └── fixture_data/                   # generated (git-ignored) — pre-computed embeddings
-    ├── full/
+    ├── small_baseline/
     └── startup_founder/
 ```
 
@@ -75,10 +75,10 @@ Fixtures define the todos and facts that get loaded into Qdrant test collections
 
 | Fixture | Size | Purpose |
 |---------|------|---------|
-| `full.yaml` | 5 todos, 4 facts | Small baseline for quick sanity checks |
+| `small_baseline.yaml` | 5 todos, 4 facts | Small baseline for quick sanity checks |
 | `startup_founder.yaml` | 100 todos, 200 facts | Large-scale precision tests based on startup journal persona |
 
-**`datasets/fixtures/full.yaml`** (example):
+**`datasets/fixtures/small_baseline.yaml`** (example):
 
 ```yaml
 todos:
@@ -110,7 +110,7 @@ Scenario files use a `groups` structure. Each group has a name, an optional `fix
 ```yaml
 groups:
   - name: small_baseline
-    fixtures: full               # references datasets/fixtures/full.yaml
+    fixtures: small_baseline     # references datasets/fixtures/small_baseline.yaml
     scenarios:
       - id: my_test
         ...

@@ -78,7 +78,7 @@ Tests `_extract_triage_items_from_snapshot()` — given an app accessibility tre
 
 Two fixture sets exist under `datasets/fixtures/`:
 
-**`full.yaml`** — Small baseline (5 todos, 4 facts). Quick sanity checks.
+**`small_baseline.yaml`** — Small baseline (5 todos, 4 facts). Quick sanity checks.
 
 **`startup_founder.yaml`** — Large-scale (100 todos, 200 facts). Based on the Felix startup journal persona. Tests precision when the agent must find the right item among many similar ones across engineering, product, design, marketing, hiring, operations, personal, and team/process categories.
 
@@ -106,7 +106,7 @@ Scenarios are defined in YAML files under `datasets/`. Each file uses a `groups`
 ```yaml
 groups:
   - name: small_baseline
-    fixtures: full          # loads fixture_data/full/
+    fixtures: small_baseline # loads fixture_data/small_baseline/
     scenarios:
       - id: create_new_unrelated
         item:
@@ -153,7 +153,7 @@ evals/
 ├── eval_daemon_processor.py        # Daemon snapshot extraction eval
 ├── datasets/
 │   ├── fixtures/
-│   │   ├── full.yaml               # Small baseline (5 todos, 4 facts)
+│   │   ├── small_baseline.yaml     # Small baseline (5 todos, 4 facts)
 │   │   └── startup_founder.yaml    # Large-scale (100 todos, 200 facts)
 │   ├── freewrite_processor.yaml    # Freewrite scenarios
 │   ├── search.yaml                 # Search scenarios
@@ -162,6 +162,6 @@ evals/
 │   ├── daemon_inputs/              # Accessibility tree dumps for daemon eval
 │   └── freewrite_inputs/           # Long-form documents for sliding window evals
 └── fixture_data/                   # Generated (git-ignored) — pre-computed embeddings
-    ├── full/
+    ├── small_baseline/
     └── startup_founder/
 ```
