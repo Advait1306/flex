@@ -41,6 +41,7 @@ uv run python -m evals.run --component triage --scenario no_duplicate --log-leve
 | `freewrite` | `_extract_triage_items()` — extracts actionable items from freeform text | No | Yes |
 | `search` | `search_todos()` / `search_facts()` — retrieval quality against fixture data | Yes | Embeddings only |
 | `triage` | `triage_agent()` — end-to-end decision making (search + action selection) | Yes | Yes |
+| `daemon` | `_extract_triage_items_from_snapshot()` — extracts signal from app accessibility trees | No | Yes |
 
 ## File structure
 
@@ -51,6 +52,7 @@ evals/
 ├── eval_freewrite_processor.py     # freewrite processor evaluator
 ├── eval_search.py                  # search evaluator
 ├── eval_triage_agent.py            # triage agent evaluator
+├── eval_daemon_processor.py        # daemon snapshot extraction evaluator
 ├── datasets/
 │   ├── fixtures/                   # fixture sets (Qdrant data)
 │   │   ├── full.yaml               # small baseline (5 todos, 4 facts)
@@ -60,7 +62,8 @@ evals/
 │   │   └── startup_journal.txt
 │   ├── search.yaml                 # search test scenarios
 │   ├── triage_agent.yaml           # triage test scenarios
-│   └── daemon_processor.yaml       # daemon test scenarios
+│   ├── daemon_processor.yaml       # daemon test scenarios
+│   └── daemon_inputs/              # accessibility tree dumps (Linear, Slack)
 └── fixture_data/                   # generated (git-ignored) — pre-computed embeddings
     ├── full/
     └── startup_founder/
@@ -185,12 +188,28 @@ The document file (`startup_journal.txt`) is a ~20k word freewrite journal with 
       title: ["laptop", "work"]            # list = keyword check (case-insensitive)
 ```
 
+### Daemon processor scenarios
+
+```yaml
+- id: slack_dm_task_request
+  app_name: "Slack"                            # application name
+  app_category: "electron"                     # app category
+  content_file: "daemon_inputs/slack_dm.txt"   # accessibility tree dump
+  expect:
+    action: triage                             # "triage" or "do_nothing"
+    min_items: 2                               # minimum extracted items
+    max_items: 4                               # maximum extracted items
+    all_items_have_context: true               # every item must have context
+    items_contain: ["PR #247"]                 # keywords in item text
+    items_not_contain: ["[Button]", "[Link]"]  # UI chrome correctly filtered
+```
+
 ## How it works
 
 - **Fixture isolation**: Search and triage evals patch `COLLECTION_NAME` to use `todos_eval` / `facts_eval` collections, keeping production data untouched.
-- **Mutation interception**: Triage eval patches `_create_todo`, `_update_todo`, and `_save_fact` with fakes that record calls without writing to Qdrant.
+- **Mutation interception**: Triage eval patches `_create_todo`, `_update_todo`, and `_save_fact` with fakes that record calls. All recorded actions are scanned for a matching entry (not just the last action).
 - **Real search**: Search functions run against real Qdrant with pre-computed fixture embeddings. Query embeddings are computed live.
-- **Multiple runs**: LLM-based evals (freewrite, triage) are non-deterministic. Run multiple times to measure consistency. Search is deterministic (defaults to 1 run).
+- **Multiple runs**: LLM-based evals (freewrite, triage, daemon) are non-deterministic. Run multiple times to measure consistency. Search is deterministic (defaults to 1 run).
 
 ## Output
 

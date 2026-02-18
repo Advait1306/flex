@@ -56,7 +56,7 @@ Tests the full triage agent end-to-end: given an item, does it search correctly 
   - Exact match for scalars (with `fixture_id()` conversion for todo/fact IDs)
 - `args_null` — are specific arguments absent (e.g. `description` should not be set on status-only updates)?
 
-**Mutation interception:** Search hits real Qdrant fixtures, but writes (`_create_todo`, `_update_todo`, `_save_fact`, `_update_fact`) are replaced with fakes that record calls. The last recorded action is checked against expectations.
+**Mutation interception:** Search hits real Qdrant fixtures, but writes (`_create_todo`, `_update_todo`, `_save_fact`, `_update_fact`) are replaced with fakes that record calls. All recorded actions are scanned for a matching entry — the first candidate passing all expected checks wins. (`_update_fact` shares the `_save_fact` patch; the two are distinguished by checking whether the `fact_id` matches a known fixture ID.)
 
 ### 4. Daemon Processor (`eval_daemon_processor.py`)
 
@@ -70,7 +70,7 @@ Tests `_extract_triage_items_from_snapshot()` — given an app accessibility tre
 - `context_contains` — do extracted item contexts contain expected keywords?
 - `all_items_have_context` — does every extracted item include a context string?
 
-**No Qdrant needed.** Scenarios reference external content files (`datasets/daemon_inputs/`) containing real accessibility tree dumps. Currently tests Linear app views.
+**No Qdrant needed.** Scenarios reference external content files (`datasets/daemon_inputs/`) containing real accessibility tree dumps. Tests Linear and Slack app views.
 
 ## Fixtures
 
