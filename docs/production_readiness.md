@@ -4,7 +4,7 @@
 
 **What happens when the LLM returns malformed output? (In both the streaming pipeline and the daemon)**
 
-When the LLM generated malformed output we fail gracefully. This can currently be viewed in trace data. Although a datadog system should ideally be attached as well which would send alerts when these errors occur.
+When the LLM generates malformed output, we fail gracefully. This can currently be viewed in trace data. A Datadog system should ideally be attached as well, which would send alerts when these errors occur.
 
 | Error indicator in trace tree                                | Error message in details                                    |
 | ------------------------------------------------------------ | ----------------------------------------------------------- |
@@ -18,7 +18,7 @@ Currently none of these are being handled given the proof of concept nature of t
 
 #### Rate limits & Timeouts
 
-The processing of data via `freewrite_processing_agent`, `daemon_processing_agent` & `triage_agent` happens on queue based system, allowing us to recover from failures using simple job retry mechanism available in any queue system. Currently the queue is handled internally with python asyncio, although in production a queue library is recommended.
+The processing of data via `freewrite_processing_agent`, `daemon_processing_agent` & `triage_agent` happens on a queue-based system, allowing us to recover from failures using a simple job retry mechanism available in any queue system. Currently the queue is handled internally with Python asyncio, although in production a queue library is recommended.
 
 #### Provider outages
 
@@ -32,13 +32,13 @@ While we can have mechanisms to internally handle errors, crashes are to be take
 
 MacOS allows this via `launchd` & `SMAppService`. More reading is required on this in order to get a deeper understanding.
 
-> This isn't configured in the current application due to it's proof of concept nature and quicker testing requirements. Which involve killing the application on a regular basis.
+> This isn't configured in the current application due to its proof-of-concept nature and quicker testing requirements, which involve killing the application on a regular basis.
 
 ### Observability
 
 **Can you see what the daemon is filtering vs sending to the LLM?**
 
-The way our current daemon pre-filtering works is hash based. In the scenario where the daemon chooses not to send data to our pipeline guarantees that it's a duplicate. Which means the same data has already been sent once.
+The way our current daemon pre-filtering works is hash based. In the scenario where the daemon chooses not to send data, our pipeline guarantees that it's a duplicate, which means the same data has already been sent once.
 
 In cases where we add a classifier based pre-filter, we can add test time tracing with a logging framework.
 
@@ -66,9 +66,9 @@ Annotations can also be made on every block which would then be used as feedback
 
 **Can you see why two items were or weren't linked across sources?**
 
-The architecture of our pipeline extracts all information from a sources and sends high quality intent and context data to the triage agent. So linking two items across sources isn't really a thing. It's just linking
+The architecture of our pipeline extracts all information from a sources and sends high quality intent and context data to the triage agent. So linking two items across sources isn't really a thing. It's just linking.
 
-As mentioned above, we can see details of what the triage agent searched for, and what these search results returned. Although there aren't currently any interpretability tools that'll allows to understand why the LLM chose to link / not link two sources.
+As mentioned above, we can see details of what the triage agent searched for, and what these search results returned. Although there aren't currently any interpretability tools that allow us to understand why the LLM chose to link or not link two sources.
 
 A certain level of analysis can be drawn by taking examples and creating multiple eval examples of it and checking what's being linked and what's not.
 
@@ -82,7 +82,7 @@ We would ideally work backward from the action to the AI trace. Here's an exampl
 
 2. We should store all actions as events in our DB linking them to the trace id from langsmith. Allowing us to quickly get the trace a particular action was generated from.
 
-3. Once we have the trace we can understand what input triggered the pipeline, what what extracted on the input & sent to the triage agent, and finally why the triage agent chose to create that action.
+3. Once we have the trace we can understand what input triggered the pipeline, what was extracted from the input and sent to the triage agent, and finally why the triage agent chose to create that action.
 
 > This also helps with the fact that we won't have to store all of the user sessions or raw data.
 
@@ -96,15 +96,15 @@ TBD
 
 #### Freewrite
 
-All of freewrite session data goes to our backend where it's stored in postgres table as a jsonb. Whenever a new sentence is added, we use that as a trigger along with last 10000 words as context.
+All freewrite session data goes to our backend where it's stored in a Postgres table as JSONB. Whenever a new sentence is added, we use that as a trigger along with last 10000 words as context.
 
-We can add a 24 hour erase mechanism onto this as well. All important data gets distilled down to facts that're stored in our vector database anyway.
+We can add a 24 hour erase mechanism onto this as well. All important data gets distilled down to facts that are stored in our vector database anyway.
 
 For speech, we directly connect the user to OpenAI using a one time use token. OpenAI returns transcripts directly to the user which are written onto the freewrite document.
 
 #### Daemon
 
-For the applications that're being observed, we get accessibility tree data that's polled every second. Hashes generated by this data are stored locally and used for deduplication before sending it for processing.
+For the applications that are being observed, we get accessibility tree data that's polled every second. Hashes generated by this data are stored locally and used for deduplication before sending it for processing.
 
 **What data is stored in the vector store vs discarded after processing?**
 
@@ -112,7 +112,7 @@ We have two collections in the vector store. `Facts` and `Todos`.
 
 Facts contain data that can be used later to form todos. This involves preferences, updates, or any information that's provided without an intent. 
 
-Todos contain data on intent that the user has shown about getting something done. While creating these facts are searched to enrich with prior context.
+Todos contain data on intent that the user has shown about getting something done. While creating these, facts are searched to enrich with prior context.
 
 Other than these two pieces of information, everything else that enters the pipeline is discarded.
 
@@ -120,7 +120,7 @@ Other than these two pieces of information, everything else that enters the pipe
 
 The current APIs don't allow for this, although we could add a source parameter on actions which would allow them to find out what had been sent.
 
-User based auditing is a problem because our ingest pipeline has a terrible signal to noise ratio. Hence, we could have the ability to audit actions which link back to their triggers.
+User-based auditing is a problem because our ingest pipeline has a terrible signal-to-noise ratio. Hence, we could have the ability to audit actions which link back to their triggers.
 
 ### Edge cases
 
@@ -130,7 +130,7 @@ This is alright, the transcriptions get generated as VAD triggers a close. The i
 
 **App crashes or becomes unresponsive while daemon is observing**
 
-This hasn't been tested, nor am I fully sure on how this would be tested. Although the current single threaded nature of our daemon means that we also get stuck while trying to retrieve the AX tree of the application.
+This hasn't been tested. The current single-threaded nature of our daemon means that we also get stuck while trying to retrieve the AX tree of the application.
 
 This can be solved in two ways:
 
@@ -177,7 +177,7 @@ This also highlights how I'd like to approach applied AI here, in the sense that
 
 #### One week
 
-1. Adding live transcription using the newly release Mistral models.
+1. Adding live transcription using the newly released Mistral models.
 
 2. Add entities like people, work (repository), team or some grouping that is grounded.
 
@@ -187,13 +187,13 @@ This also highlights how I'd like to approach applied AI here, in the sense that
 
 1. Adding a grouping behaviour using “tags” (not embeddings) that allows the model to group things (very big nitpick)
 
-2. Having the ability to steer the behaviour of the pipeline. Currently it’s tuned to how we want it, although user preferences might differ, we should have some UX around having feedback that changes things only for a user.\
+2. Having the ability to steer the behaviour of the pipeline. Currently it's tuned to how we want it, although user preferences might differ. We should have some UX around feedback that changes things only for a user.
 
 3. Add temporal nature to everything (currently sometimes jankily stored in description)
 
 **What's the riskiest part for production deployment?**
 
-_Controlling the user experience would the riskiest._
+_Controlling the user experience would be the riskiest._
 
 The pipeline stores a lot of information as facts and todos without a strict steering mechanism. If a user was to be onboarded to both freewrite and daemon, they'd see massive amounts of todos from all data sources.
 
@@ -201,6 +201,6 @@ This would be overwhelming from a UX perspective & does mean that the initial re
 
 I currently haven't found the right UX for setting the threshold of how much of user's data gets converted to a todo.
 
-Personally, I wouldn't want a message from my partner that goes like, "Can we go out to this restaurant on Saturday" to turn into a todo, but I could bet that there's a class of user who'd expect that.
+Personally, I wouldn't want a message from my partner that goes like, "Can we go out to this restaurant on Saturday" to turn into a todo, but I could bet that there's a class of users who'd expect that.
 
 We must have thorough discussions on how this steering would work from a UX and a data storage & user disclosure perspective.
