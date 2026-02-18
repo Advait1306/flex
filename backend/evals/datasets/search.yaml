@@ -1,5 +1,5 @@
 groups:
-  - name: full_collection
+  - name: small_baseline
     fixtures: full
     scenarios:
       - id: exact_keyword_match

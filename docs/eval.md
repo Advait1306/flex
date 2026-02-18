@@ -9,6 +9,7 @@ The eval system tests the AI pipeline components against predefined scenarios wi
 ```bash
 ./eval.sh                                    # Run all components (3 runs each)
 ./eval.sh --component triage                 # Run one component
+./eval.sh --group startup_founder            # Run only groups matching substring
 ./eval.sh --runs 5                           # Override runs per scenario
 ./eval.sh --scenario create_new              # Filter scenarios by substring
 ./eval.sh --log-level debug                  # Set log verbosity (debug/info/warn/error)
@@ -73,25 +74,17 @@ Tests `_extract_triage_items_from_snapshot()` — given an app accessibility tre
 
 ## Fixtures
 
-### Fixture Definitions (`datasets/fixtures/full.yaml`)
+### Fixture Sets
 
-Defines a test universe of todos and facts:
+Two fixture sets exist under `datasets/fixtures/`:
 
-| ID  | Item                            | Type | Status      |
-| --- | ------------------------------- | ---- | ----------- |
-| t1  | Buy groceries                   | todo | pending     |
-| t2  | Fix authentication bug          | todo | in_progress |
-| t3  | Set up waitlist for Felix       | todo | pending     |
-| t4  | Buy billboards for BLR          | todo | pending     |
-| t5  | Call dentist for appointment    | todo | pending     |
-| f1  | Preferred language is Python    | fact | preference  |
-| f2  | Works at startup called Felix   | fact | work        |
-| f3  | Sabesh handles frontend         | fact | work        |
-| f4  | SuperMemory for vector/graph DB | fact | work        |
+**`full.yaml`** — Small baseline (5 todos, 4 facts). Quick sanity checks.
 
-### Pre-computed Embeddings (`fixture_data/full/`)
+**`startup_founder.yaml`** — Large-scale (100 todos, 200 facts). Based on the Felix startup journal persona. Tests precision when the agent must find the right item among many similar ones across engineering, product, design, marketing, hiring, operations, personal, and team/process categories.
 
-`generate_fixtures` reads the YAML, computes real embeddings (one vector per tag, multivector), and writes `todos.json` / `facts.json`. These are loaded into Qdrant at eval time.
+### Pre-computed Embeddings (`fixture_data/<name>/`)
+
+`--generate-fixtures` reads each YAML, computes real embeddings (one vector per tag, multivector), and writes `todos.json` / `facts.json`. These are loaded into Qdrant at eval time.
 
 ### Deterministic IDs
 
@@ -112,7 +105,7 @@ Scenarios are defined in YAML files under `datasets/`. Each file uses a `groups`
 
 ```yaml
 groups:
-  - name: full_collection
+  - name: small_baseline
     fixtures: full          # loads fixture_data/full/
     scenarios:
       - id: create_new_unrelated
@@ -123,6 +116,12 @@ groups:
           action: create_todo
           args_contain:
             title: [laptop]
+
+  - name: startup_founder
+    fixtures: startup_founder   # loads fixture_data/startup_founder/
+    scenarios:
+      - id: status_start_crowded
+        ...
 ```
 
 Groups with no `fixtures` key create empty Qdrant collections (cold-start testing).
@@ -154,18 +153,15 @@ evals/
 ├── eval_daemon_processor.py        # Daemon snapshot extraction eval
 ├── datasets/
 │   ├── fixtures/
-│   │   └── full.yaml               # Fixture definitions (todos + facts)
+│   │   ├── full.yaml               # Small baseline (5 todos, 4 facts)
+│   │   └── startup_founder.yaml    # Large-scale (100 todos, 200 facts)
 │   ├── freewrite_processor.yaml    # Freewrite scenarios
 │   ├── search.yaml                 # Search scenarios
 │   ├── triage_agent.yaml           # Triage scenarios
 │   ├── daemon_processor.yaml       # Daemon scenarios
-│   └── daemon_inputs/              # Accessibility tree dumps for daemon eval
-│       ├── linear_simple_title.txt
-│       ├── linear_issue_detail.txt
-│       ├── linear_board_view.txt
-│       └── linear_pr_view.txt
-└── fixture_data/
-    └── full/
-        ├── todos.json              # Pre-computed todo embeddings
-        └── facts.json              # Pre-computed fact embeddings
+│   ├── daemon_inputs/              # Accessibility tree dumps for daemon eval
+│   └── freewrite_inputs/           # Long-form documents for sliding window evals
+└── fixture_data/                   # Generated (git-ignored) — pre-computed embeddings
+    ├── full/
+    └── startup_founder/
 ```

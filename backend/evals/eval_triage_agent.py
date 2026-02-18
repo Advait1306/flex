@@ -154,13 +154,15 @@ def _evaluate_once(scenario: dict) -> dict[str, bool]:
     return checks
 
 
-def run(runs: int = 3, scenario_filter: str | None = None) -> list[ScenarioResult]:
+def run(runs: int = 3, scenario_filter: str | None = None, group_filter: str | None = None) -> list[ScenarioResult]:
     """Run triage agent eval scenarios, optionally filtered by ID substring."""
     with open(DATASETS_DIR / "triage_agent.yaml") as f:
         data = yaml.safe_load(f)
 
     results = []
     for group in data["groups"]:
+        if group_filter and group_filter not in group.get("name", ""):
+            continue
         fixture_name = group.get("fixtures")
         scenarios = [s for s in group["scenarios"] if not scenario_filter or scenario_filter in s["id"]]
         if not scenarios:

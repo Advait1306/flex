@@ -1,0 +1,1339 @@
+# Startup founder persona fixture based on the Felix startup journal.
+# Felix: developer tool startup for landing pages/templates.
+# Team: Devon (backend), Priya (backend), Jake (design), Leo (backend),
+#        Emily (marketing), Sarah (finance), Maria (new hire from Stripe).
+# Context: approaching beta launch, 12K waitlist, office in Bangalore.
+
+todos:
+  # ── Engineering (t1–t30) ──────────────────────────────────────────────
+  - id: "t1"
+    title: "Complete API migration from REST to GraphQL"
+    description: "Convert legacy REST endpoints to new GraphQL layer, currently about 60% through"
+    status: "in_progress"
+    tags: ["api", "graphql", "migration", "rest", "backend"]
+  - id: "t2"
+    title: "Fix auth middleware token refresh edge cases"
+    description: "Lots of edge cases around token refresh not anticipated during API migration"
+    status: "in_progress"
+    tags: ["auth", "middleware", "token-refresh", "api", "security"]
+  - id: "t3"
+    title: "Implement rate limiter for public API"
+    description: ""
+    status: "pending"
+    tags: ["rate-limiting", "api", "backend", "security"]
+  - id: "t4"
+    title: "Write integration tests for API endpoints"
+    description: "Cover all critical flows including signup, project creation, and publishing"
+    status: "in_progress"
+    tags: ["testing", "api", "integration-tests", "qa"]
+  - id: "t5"
+    title: "Refactor notification service with event bus pattern"
+    description: "Replace current implementation with proper event bus for easier notification channel additions"
+    status: "in_progress"
+    tags: ["notification", "refactor", "event-bus", "backend"]
+  - id: "t6"
+    title: "Optimize database connection pooling configuration"
+    description: "Switch PgBouncer from session mode to transaction mode for workload efficiency"
+    status: "completed"
+    tags: ["database", "pgbouncer", "performance", "postgresql"]
+  - id: "t7"
+    title: "Set up Redis caching for waitlist endpoint"
+    description: "60-second TTL to bring P99 latency back under 200ms"
+    status: "completed"
+    tags: ["redis", "caching", "waitlist", "performance"]
+  - id: "t8"
+    title: "Fix webhook retry logic with backoff strategy"
+    description: "Redis connection pool exhaustion under high load causing retry workers to spin up too fast"
+    status: "in_progress"
+    tags: ["webhook", "redis", "retry", "backend"]
+  - id: "t9"
+    title: "Fix memory leak in PDF generation service"
+    description: "Memory leak when processing large documents, adding to sprint backlog"
+    status: "cancelled"
+    tags: ["pdf", "memory-leak", "bug", "backend"]
+  - id: "t10"
+    title: "Parallelize CI integration test suite"
+    description: "Pipeline takes 45 minutes, most time is in integration test suite"
+    status: "pending"
+    tags: ["ci", "testing", "devops", "performance"]
+  - id: "t11"
+    title: "Add structured logging with correlation IDs"
+    description: "Cross-service debugging currently like piecing together a puzzle without all pieces"
+    status: "in_progress"
+    tags: ["logging", "observability", "correlation-id", "backend"]
+  - id: "t12"
+    title: "Implement distributed tracing with OpenTelemetry"
+    description: "Background task building on structured logging spike, using Jaeger UI"
+    status: "in_progress"
+    tags: ["opentelemetry", "tracing", "observability", "jaeger"]
+  - id: "t13"
+    title: "Set up automated SSL certificate renewal"
+    description: "Staging cert expired, certbot with cron for staging, ACM for production behind load balancer"
+    status: "completed"
+    tags: ["ssl", "certificate", "devops", "automation"]
+  - id: "t14"
+    title: "Fix cursor position bug in collaboration module"
+    description: "Editor loses cursor position when teammate joins in real-time, re-renders entire state"
+    status: "completed"
+    tags: ["collaboration", "editor", "cursor", "bug", "frontend"]
+  - id: "t15"
+    title: "Standardize API error response format"
+    description: "Some endpoints return detailed field-level errors, others return generic messages"
+    status: "pending"
+    tags: ["api", "error-handling", "standards", "backend"]
+  - id: "t16"
+    title: "Add idempotency keys to all queue consumers"
+    description: "Email duplication bug revealed three other queue consumers with same vulnerability"
+    status: "in_progress"
+    tags: ["queue", "idempotency", "reliability", "backend"]
+  - id: "t17"
+    title: "Fix email deduplication race condition in queue"
+    description: "Duplicate welcome emails sent to waitlist signup batch"
+    status: "completed"
+    tags: ["email", "race-condition", "bug", "queue"]
+  - id: "t18"
+    title: "Set up Sentry error monitoring and alerts"
+    description: "Currently averaging 30 unhandled exceptions per day, mostly in PDF service"
+    status: "completed"
+    tags: ["sentry", "monitoring", "error-tracking", "observability"]
+  - id: "t19"
+    title: "Configure blue-green deployment pipeline"
+    description: "Health checks and automatic rollback on failing health check verified in staging"
+    status: "completed"
+    tags: ["deployment", "blue-green", "devops", "ci"]
+  - id: "t20"
+    title: "Add connection pool monitoring through PgBouncer"
+    description: "Part of database monitoring setup with pg_stat_statements and slow query alerts"
+    status: "completed"
+    tags: ["pgbouncer", "monitoring", "database", "observability"]
+  - id: "t21"
+    title: "Configure auto-scaling triggers for beta launch"
+    description: "Scale when CPU exceeds 70%, running t3.xlarge instances behind ALB"
+    status: "completed"
+    tags: ["auto-scaling", "aws", "infrastructure", "beta"]
+  - id: "t22"
+    title: "Implement content security policy headers"
+    description: "Strict CSP blocking inline scripts with sandboxed iframe for template preview"
+    status: "completed"
+    tags: ["security", "csp", "headers", "frontend"]
+  - id: "t23"
+    title: "Build API key rotation mechanism"
+    description: "24-hour grace period where both old and new keys work simultaneously"
+    status: "completed"
+    tags: ["api-key", "rotation", "security", "authentication"]
+  - id: "t24"
+    title: "Build feature flag system backed by Redis"
+    description: "User-level targeting, percentage-based rollouts, and kill switches"
+    status: "completed"
+    tags: ["feature-flags", "redis", "rollout", "backend"]
+  - id: "t25"
+    title: "Fix template rendering for deleted assets"
+    description: "Silently renders empty box instead of error placeholder when component references deleted asset"
+    status: "cancelled"
+    tags: ["template", "rendering", "bug", "frontend"]
+  - id: "t26"
+    title: "Implement GraphQL subscriptions over SSE"
+    description: "Simpler than WebSockets, better for one-way updates, degrades gracefully behind reverse proxies"
+    status: "in_progress"
+    tags: ["graphql", "sse", "subscriptions", "real-time"]
+  - id: "t27"
+    title: "Create load test scripts for signup and project creation"
+    description: "Using k6 to simulate 1000 concurrent users through critical flows"
+    status: "completed"
+    tags: ["load-testing", "k6", "performance", "qa"]
+  - id: "t28"
+    title: "Fix IDOR vulnerability in project settings endpoint"
+    description: "Medium severity finding from penetration test report"
+    status: "completed"
+    tags: ["security", "idor", "vulnerability", "pentest"]
+  - id: "t29"
+    title: "Fix CSRF token issue on team management page"
+    description: "Medium severity finding from penetration test report"
+    status: "completed"
+    tags: ["security", "csrf", "vulnerability", "pentest"]
+  - id: "t30"
+    title: "Investigate flaky CI pipeline timeout errors"
+    description: "Three builds failed with intermittent timeout errors in integration tests"
+    status: "cancelled"
+    tags: ["ci", "flaky-tests", "debugging", "devops"]
+
+  # ── Product (t31–t45) ─────────────────────────────────────────────────
+  - id: "t31"
+    title: "Build interactive onboarding tutorial flow"
+    description: "Three-step wizard from template selection to customization to publishing"
+    status: "in_progress"
+    tags: ["onboarding", "tutorial", "wizard", "product"]
+  - id: "t32"
+    title: "Build template marketplace backend service"
+    description: "Template registry, validation pipeline, and CDN-backed distribution layer"
+    status: "pending"
+    tags: ["marketplace", "templates", "backend", "product"]
+  - id: "t33"
+    title: "Implement analytics dashboard with InfluxDB"
+    description: "Three views: overview, traffic sources, and conversion funnel"
+    status: "pending"
+    tags: ["analytics", "dashboard", "influxdb", "product"]
+  - id: "t34"
+    title: "Add custom domain support for published pages"
+    description: "Allow users to publish landing pages on their own domains"
+    status: "pending"
+    tags: ["custom-domains", "publishing", "feature", "product"]
+  - id: "t35"
+    title: "Plan staged beta rollout with initial cohort of 500"
+    description: "Start with earliest waitlist signups before opening floodgates"
+    status: "in_progress"
+    tags: ["beta", "rollout", "launch", "planning"]
+  - id: "t36"
+    title: "Build private beta invite system with batch sending"
+    description: "Invite codes via email, batches of 200, tracking acceptance rates"
+    status: "completed"
+    tags: ["beta", "invite-system", "email", "product"]
+  - id: "t37"
+    title: "Implement free tier usage limits at API level"
+    description: "Enforce plan-based limits, free tier boundaries still undecided"
+    status: "pending"
+    tags: ["pricing", "free-tier", "api", "product"]
+  - id: "t38"
+    title: "Build feature flag admin UI panel"
+    description: "Toggle switches, targeting rules, percentage rollout controls"
+    status: "completed"
+    tags: ["feature-flags", "admin-ui", "panel", "product"]
+  - id: "t39"
+    title: "Design three-tier pricing page"
+    description: "Simple layout with clear CTAs and prominent most-popular badge on middle tier"
+    status: "pending"
+    tags: ["pricing", "design", "tiers", "product"]
+  - id: "t40"
+    title: "Build template versioning with content-addressed storage"
+    description: "Immutable version IDs with rollback support and free deduplication"
+    status: "in_progress"
+    tags: ["templates", "versioning", "storage", "product"]
+  - id: "t41"
+    title: "Implement drag-and-drop dashboard widgets"
+    description: "Card-based widgets with reordering for analytics section"
+    status: "pending"
+    tags: ["dashboard", "drag-drop", "widgets", "frontend"]
+  - id: "t42"
+    title: "Add starter templates for beginner users"
+    description: "Middle ground between full customization and approachability for new users"
+    status: "cancelled"
+    tags: ["templates", "onboarding", "beginner", "product"]
+  - id: "t43"
+    title: "Build live playground widget for homepage"
+    description: "Mini template editor visitors can interact with directly on the landing page"
+    status: "completed"
+    tags: ["playground", "landing-page", "demo", "marketing"]
+  - id: "t44"
+    title: "Set up user feedback collection mechanism"
+    description: "Post-launch priority for collecting feature requests from beta users"
+    status: "pending"
+    tags: ["feedback", "analytics", "post-launch", "product"]
+  - id: "t45"
+    title: "Design template remix and fork feature"
+    description: "Like GitHub for landing pages — users can fork public templates and customize"
+    status: "cancelled"
+    tags: ["templates", "fork", "remix", "product"]
+
+  # ── Design (t46–t55) ──────────────────────────────────────────────────
+  - id: "t46"
+    title: "Finalize brand guidelines with indigo and coral palette"
+    description: "Passed WCAG AA for critical text, added secondary data viz palette"
+    status: "completed"
+    tags: ["brand", "design", "colors", "accessibility"]
+  - id: "t47"
+    title: "Create dashboard widget mockups with sparklines"
+    description: "Analytics overview with sparklines and collapsible detail view"
+    status: "in_progress"
+    tags: ["dashboard", "mockups", "sparklines", "design"]
+  - id: "t48"
+    title: "Redesign landing page with contractor illustrations"
+    description: "Developer-first positioning with code snippets, playground, and testimonials"
+    status: "in_progress"
+    tags: ["landing-page", "redesign", "illustrations", "design"]
+  - id: "t49"
+    title: "Design onboarding flow wireframes"
+    description: "Interactive tutorial with guided tooltips and pre-built content blocks"
+    status: "completed"
+    tags: ["onboarding", "wireframes", "design", "ux"]
+  - id: "t50"
+    title: "Create data visualization color palette"
+    description: "Muted greens and blues complementing primary indigo and coral"
+    status: "completed"
+    tags: ["data-viz", "colors", "charts", "design"]
+  - id: "t51"
+    title: "Build component library Storybook documentation"
+    description: "32 components with interactive examples, accessibility notes, and usage guidelines"
+    status: "completed"
+    tags: ["storybook", "component-library", "design-system", "documentation"]
+  - id: "t52"
+    title: "Design pricing page layout"
+    description: "Simple pricing with few tiers and clear calls to action"
+    status: "pending"
+    tags: ["pricing", "layout", "design", "marketing"]
+  - id: "t53"
+    title: "Design template marketplace masonry grid"
+    description: "Pinterest-style grid with lazy loading and virtual scrolling for performance"
+    status: "pending"
+    tags: ["marketplace", "masonry", "grid", "design"]
+  - id: "t54"
+    title: "Create email template designs for beta invites"
+    description: "A/B tested subject lines, winning variant at 45% open rate"
+    status: "completed"
+    tags: ["email", "design", "beta-invite", "marketing"]
+  - id: "t55"
+    title: "Get homepage mockup final sign-off from team"
+    description: "Jake has full high-fidelity mockups, needs review before implementation"
+    status: "pending"
+    tags: ["homepage", "mockup", "review", "design"]
+
+  # ── Marketing (t56–t67) ───────────────────────────────────────────────
+  - id: "t56"
+    title: "Run A/B test for landing page hero section"
+    description: "Simplified hero with larger CTA versus current version"
+    status: "completed"
+    tags: ["ab-test", "landing-page", "conversion", "marketing"]
+  - id: "t57"
+    title: "Coordinate design influencer partnership for beta review"
+    description: "Influencer with 200K followers for sponsored review of Felix"
+    status: "pending"
+    tags: ["influencer", "partnership", "social-media", "marketing"]
+  - id: "t58"
+    title: "Write Twitter thread series for product launch"
+    description: "Building engagement toward beta announcement"
+    status: "in_progress"
+    tags: ["twitter", "social-media", "launch", "marketing"]
+  - id: "t59"
+    title: "Draft launch blog post series"
+    description: "Why we built Felix, technical architecture, early tester case studies"
+    status: "in_progress"
+    tags: ["blog", "content", "launch", "marketing"]
+  - id: "t60"
+    title: "Optimize landing page Lighthouse score above 90"
+    description: "Currently at 88, still need to fix render-blocking CSS"
+    status: "in_progress"
+    tags: ["lighthouse", "performance", "seo", "web-vitals"]
+  - id: "t61"
+    title: "Prepare Austin Tech Summit presentation"
+    description: "30-minute talk on building developer tools, outline halfway done"
+    status: "in_progress"
+    tags: ["conference", "presentation", "austin", "speaking"]
+  - id: "t62"
+    title: "Set up Product Hunt launch page"
+    description: "Value proposition, demo video embed, maker comments prepared for Tuesday"
+    status: "completed"
+    tags: ["product-hunt", "launch", "marketing", "growth"]
+  - id: "t63"
+    title: "Draft Hacker News Show HN post"
+    description: "Concise description of Felix with technical approach and feedback invite"
+    status: "pending"
+    tags: ["hacker-news", "launch", "marketing", "developer"]
+  - id: "t64"
+    title: "Improve SEO for marketing website"
+    description: "Address technical SEO issues from site audit"
+    status: "cancelled"
+    tags: ["seo", "marketing", "website", "growth"]
+  - id: "t65"
+    title: "Create press kit for media outreach"
+    description: "Logos, screenshots, company fact sheet, founder bios"
+    status: "completed"
+    tags: ["press-kit", "media", "marketing", "pr"]
+  - id: "t66"
+    title: "Plan launch day social media coordination"
+    description: "Product Hunt, blog, Twitter, Hacker News staggered through the day"
+    status: "in_progress"
+    tags: ["launch-day", "social-media", "coordination", "marketing"]
+  - id: "t67"
+    title: "Set up weekly product update email to team"
+    description: "Highlights including waitlist growth, redesign progress, API migration, beta timeline"
+    status: "pending"
+    tags: ["updates", "email", "team", "communication"]
+
+  # ── Hiring (t68–t75) ──────────────────────────────────────────────────
+  - id: "t68"
+    title: "Post senior backend engineer job listing"
+    description: "Need distributed systems experience, posted on job boards and referral networks"
+    status: "completed"
+    tags: ["hiring", "backend", "job-posting", "recruiting"]
+  - id: "t69"
+    title: "Complete phone screen for Maria"
+    description: "5 years at Stripe on core payments API, strong distributed systems background"
+    status: "completed"
+    tags: ["hiring", "phone-screen", "maria", "recruiting"]
+  - id: "t70"
+    title: "Run technical interview round for Raj"
+    description: "Background in data pipeline engineering at Series B startup"
+    status: "completed"
+    tags: ["hiring", "interview", "raj", "recruiting"]
+  - id: "t71"
+    title: "Check references for Maria"
+    description: "Contact former Stripe manager for reference review"
+    status: "completed"
+    tags: ["hiring", "references", "maria", "recruiting"]
+  - id: "t72"
+    title: "Draft and send offer letter for Maria"
+    description: "Competitive salary with meaningful equity package"
+    status: "completed"
+    tags: ["hiring", "offer-letter", "maria", "recruiting"]
+  - id: "t73"
+    title: "Interview Arun from Google Cloud Functions team"
+    description: "System design exercise and technical assessment, Devon evaluating"
+    status: "completed"
+    tags: ["hiring", "interview", "arun", "recruiting"]
+  - id: "t74"
+    title: "Send tech stack and equity info to developer tools candidate"
+    description: "Candidate requested details about our stack and compensation before proceeding"
+    status: "pending"
+    tags: ["hiring", "recruiting", "candidate", "info-packet"]
+  - id: "t75"
+    title: "Review frontend specialist referral from Leo"
+    description: "Former colleague with React and TypeScript experience"
+    status: "pending"
+    tags: ["hiring", "referral", "frontend", "recruiting"]
+
+  # ── Operations (t76–t85) ──────────────────────────────────────────────
+  - id: "t76"
+    title: "File quarterly estimated tax payments"
+    description: "Review P&L and sign off on estimated payments by end of week"
+    status: "in_progress"
+    tags: ["taxes", "finance", "quarterly", "accounting"]
+  - id: "t77"
+    title: "Update terms of service for data privacy regulations"
+    description: "Update consent flows and add explicit opt-in checkboxes for user content"
+    status: "pending"
+    tags: ["legal", "tos", "privacy", "compliance"]
+  - id: "t78"
+    title: "Audit AWS costs and shut down idle staging instances"
+    description: "Large EC2 instances left running over the weekend in staging"
+    status: "pending"
+    tags: ["aws", "costs", "infrastructure", "cloud"]
+  - id: "t79"
+    title: "Draft quarterly investor update email"
+    description: "Include waitlist growth, API migration progress, and team expansion plans"
+    status: "in_progress"
+    tags: ["investors", "update", "quarterly", "communication"]
+  - id: "t80"
+    title: "Prepare board presentation with burn rate analysis"
+    description: "Current burn $87K/month, runway 14 months, need growth scenario models"
+    status: "pending"
+    tags: ["board", "presentation", "finance", "strategy"]
+  - id: "t81"
+    title: "Update D&O insurance policy for team expansion"
+    description: "Modest premium increase, necessary before bringing on more hires"
+    status: "completed"
+    tags: ["insurance", "legal", "admin", "hiring"]
+  - id: "t82"
+    title: "Buy billboard advertising in Bangalore"
+    description: "Purchase billboard space in BLR for local awareness campaign"
+    status: "pending"
+    tags: ["billboard", "advertising", "bangalore", "marketing"]
+  - id: "t83"
+    title: "Review and sign office lease renewal"
+    description: "Rent increasing 8%, current Koramangala location good for team"
+    status: "pending"
+    tags: ["office", "lease", "rent", "admin"]
+  - id: "t84"
+    title: "Conduct SaaS tool audit to consolidate subscriptions"
+    description: "$8K per month across 18 services, some overlap in functionality"
+    status: "pending"
+    tags: ["saas", "audit", "costs", "operations"]
+  - id: "t85"
+    title: "Set up corporate card limit increase with bank"
+    description: "Need updated financials and board resolution for higher spending limit"
+    status: "in_progress"
+    tags: ["banking", "corporate-card", "finance", "admin"]
+
+  # ── Personal (t86–t93) ────────────────────────────────────────────────
+  - id: "t86"
+    title: "Pick up groceries after work"
+    description: "Milk, eggs, bread, and fruit"
+    status: "pending"
+    tags: ["groceries", "shopping", "personal", "errands"]
+  - id: "t87"
+    title: "Schedule dentist appointment"
+    description: "Try for next Tuesday afternoon when calendar is clear"
+    status: "pending"
+    tags: ["dentist", "health", "appointment", "personal"]
+  - id: "t88"
+    title: "Drop off dry cleaning"
+    description: ""
+    status: "pending"
+    tags: ["dry-cleaning", "errands", "personal"]
+  - id: "t89"
+    title: "Renew gym membership"
+    description: ""
+    status: "cancelled"
+    tags: ["gym", "fitness", "personal", "health"]
+  - id: "t90"
+    title: "Coordinate birthday gift for mom"
+    description: "She wants a new e-reader, coordinate with sister"
+    status: "pending"
+    tags: ["family", "birthday", "gift", "personal"]
+  - id: "t91"
+    title: "Book flights and hotel for Austin conference"
+    description: "Fly in day before since early sessions start at 9am"
+    status: "pending"
+    tags: ["travel", "austin", "conference", "flights"]
+  - id: "t92"
+    title: "Take car to auto shop for check engine light"
+    description: "Likely O2 sensor, $200 fix, going Wednesday morning"
+    status: "pending"
+    tags: ["car", "maintenance", "auto-shop", "personal"]
+  - id: "t93"
+    title: "Pick up prescription from pharmacy"
+    description: "Been sitting there for three days"
+    status: "pending"
+    tags: ["pharmacy", "prescription", "health", "personal"]
+
+  # ── Team/Process (t94–t100) ───────────────────────────────────────────
+  - id: "t94"
+    title: "Update README and contribution guidelines"
+    description: "Local dev setup section references old Docker Compose file that no longer exists"
+    status: "in_progress"
+    tags: ["readme", "documentation", "contributing", "process"]
+  - id: "t95"
+    title: "Propose async standup format to team"
+    description: "Too many meetings breaking up deep work time per retro feedback"
+    status: "pending"
+    tags: ["standups", "async", "process", "meetings"]
+  - id: "t96"
+    title: "Revamp sprint retrospective format"
+    description: "Current format could be more structured and actionable"
+    status: "pending"
+    tags: ["retro", "sprint", "process", "team"]
+  - id: "t97"
+    title: "Write onboarding documentation for new engineers"
+    description: "Current docs assume too much context, rewrite getting started guide and architecture overview"
+    status: "in_progress"
+    tags: ["onboarding", "documentation", "new-hires", "process"]
+  - id: "t98"
+    title: "Define on-call rotation for post-beta support"
+    description: "Two-person weekly rotation with PagerDuty escalation path"
+    status: "in_progress"
+    tags: ["on-call", "pagerduty", "support", "operations"]
+  - id: "t99"
+    title: "Write coding conventions and engineering wiki"
+    description: "Consistent error handling, mandatory input validation, required docs for public endpoints"
+    status: "in_progress"
+    tags: ["conventions", "coding-standards", "wiki", "engineering"]
+  - id: "t100"
+    title: "Schedule disaster recovery drill for backup restore testing"
+    description: "Daily backups to S3 but restore process has never been tested"
+    status: "pending"
+    tags: ["disaster-recovery", "backups", "s3", "testing"]
+
+facts:
+  # ── Team Members (f1–f40) ─────────────────────────────────────────────
+  - id: "f1"
+    fact: "Devon is the backend lead with 4 years of experience"
+    category: "work"
+    tags: ["devon", "backend", "lead", "team"]
+  - id: "f2"
+    fact: "Devon prefers Go but works in Python for the Felix codebase"
+    category: "work"
+    tags: ["devon", "go", "python", "programming"]
+  - id: "f3"
+    fact: "Devon is leading the API migration from REST to GraphQL"
+    category: "work"
+    tags: ["devon", "api", "migration", "graphql"]
+  - id: "f4"
+    fact: "Devon estimates the API migration needs two more weeks to complete"
+    category: "work"
+    tags: ["devon", "api", "migration", "timeline"]
+  - id: "f5"
+    fact: "Devon submitted and merged the Redis caching layer for the waitlist endpoint"
+    category: "work"
+    tags: ["devon", "redis", "caching", "waitlist"]
+  - id: "f6"
+    fact: "Devon set up monitoring alerts for the cloud provider maintenance window"
+    category: "work"
+    tags: ["devon", "monitoring", "maintenance", "infrastructure"]
+  - id: "f7"
+    fact: "Devon prototyped SSE-based GraphQL subscriptions as alternative to WebSockets"
+    category: "work"
+    tags: ["devon", "sse", "graphql", "subscriptions"]
+  - id: "f8"
+    fact: "Devon is the primary on-call for launch day, Maria is secondary"
+    category: "work"
+    tags: ["devon", "on-call", "launch", "pagerduty"]
+  - id: "f9"
+    fact: "Priya found a race condition in the job queue processor during code review"
+    category: "work"
+    tags: ["priya", "race-condition", "job-queue", "code-review"]
+  - id: "f10"
+    fact: "Priya refactored the notification service introducing a proper event bus pattern"
+    category: "work"
+    tags: ["priya", "notification", "event-bus", "refactor"]
+  - id: "f11"
+    fact: "Priya advocates for event sourcing over traditional CRUD for the activity feed"
+    category: "work"
+    tags: ["priya", "event-sourcing", "crud", "architecture"]
+  - id: "f12"
+    fact: "Priya is implementing distributed tracing with OpenTelemetry across services"
+    category: "work"
+    tags: ["priya", "opentelemetry", "tracing", "observability"]
+  - id: "f13"
+    fact: "Priya set up strict content security policy with sandboxed iframe approach"
+    category: "work"
+    tags: ["priya", "csp", "security", "iframe"]
+  - id: "f14"
+    fact: "Priya proposed adding structured logging with correlation ID pattern across services"
+    category: "work"
+    tags: ["priya", "logging", "correlation-id", "observability"]
+  - id: "f15"
+    fact: "Priya is learning pottery as a hobby outside of work"
+    category: "personal"
+    tags: ["priya", "pottery", "hobby", "personal"]
+  - id: "f16"
+    fact: "Jake is the design lead who works primarily in Figma"
+    category: "work"
+    tags: ["jake", "design", "lead", "figma"]
+  - id: "f17"
+    fact: "Jake proposed deep indigo primary and warm coral accent as brand colors"
+    category: "work"
+    tags: ["jake", "brand", "indigo", "coral", "colors"]
+  - id: "f18"
+    fact: "Jake is building a component library on Radix UI primitives with custom styling"
+    category: "work"
+    tags: ["jake", "radix-ui", "component-library", "design-system"]
+  - id: "f19"
+    fact: "Jake created a Storybook instance documenting 32 components"
+    category: "work"
+    tags: ["jake", "storybook", "components", "documentation"]
+  - id: "f20"
+    fact: "Jake designed the onboarding flow that reduces time-to-first-publish from 12 to 3 minutes"
+    category: "work"
+    tags: ["jake", "onboarding", "ux", "tutorial"]
+  - id: "f21"
+    fact: "Jake is experimenting with micro-animations for dashboard transitions"
+    category: "work"
+    tags: ["jake", "animations", "dashboard", "ui"]
+  - id: "f22"
+    fact: "Leo is debugging the webhook retry logic related to Redis connection pool exhaustion"
+    category: "work"
+    tags: ["leo", "webhook", "redis", "debugging"]
+  - id: "f23"
+    fact: "Leo found that webhook retry workers spin up faster than Redis connections can recycle"
+    category: "work"
+    tags: ["leo", "webhook", "connection-pool", "redis"]
+  - id: "f24"
+    fact: "Leo pointed out that API validation error messages are inconsistent across endpoints"
+    category: "work"
+    tags: ["leo", "api", "error-messages", "standards"]
+  - id: "f25"
+    fact: "Leo implemented a token bucket rate limiter backed by Redis for the public API"
+    category: "work"
+    tags: ["leo", "rate-limiter", "token-bucket", "redis"]
+  - id: "f26"
+    fact: "Leo is training for a marathon in his spare time"
+    category: "personal"
+    tags: ["leo", "marathon", "running", "hobby"]
+  - id: "f27"
+    fact: "Emily handles marketing, content strategy, and launch coordination"
+    category: "work"
+    tags: ["emily", "marketing", "content", "launch"]
+  - id: "f28"
+    fact: "Emily's team runs the Twitter thread campaigns that doubled waitlist projections"
+    category: "work"
+    tags: ["emily", "twitter", "waitlist", "marketing"]
+  - id: "f29"
+    fact: "Emily is coordinating the launch day timeline starting at 6am with staggered channel releases"
+    category: "work"
+    tags: ["emily", "launch-day", "timeline", "coordination"]
+  - id: "f30"
+    fact: "Emily has a part-time content writer starting to help with launch content workload"
+    category: "work"
+    tags: ["emily", "content-writer", "hiring", "marketing"]
+  - id: "f31"
+    fact: "Sarah handles the Q3 budget review and preliminary financial figures"
+    category: "work"
+    tags: ["sarah", "budget", "finance", "q3"]
+  - id: "f32"
+    fact: "Maria was hired from Stripe where she spent 5 years on the core payments API"
+    category: "work"
+    tags: ["maria", "stripe", "payments", "hiring"]
+  - id: "f33"
+    fact: "Maria has deep experience with high-throughput PostgreSQL deployments"
+    category: "work"
+    tags: ["maria", "postgresql", "database", "performance"]
+  - id: "f34"
+    fact: "Maria immediately identified that PgBouncer should run in transaction mode not session mode"
+    category: "work"
+    tags: ["maria", "pgbouncer", "transaction-mode", "optimization"]
+  - id: "f35"
+    fact: "Maria's first PR was the PgBouncer optimization with connection pool monitoring dashboard"
+    category: "work"
+    tags: ["maria", "pr", "pgbouncer", "monitoring"]
+  - id: "f36"
+    fact: "Maria optimized template preview generation from 3 seconds to 800ms by parallelizing asset loading"
+    category: "work"
+    tags: ["maria", "template-preview", "performance", "optimization"]
+  - id: "f37"
+    fact: "Arun is a former Google Cloud Functions team engineer with distributed systems expertise"
+    category: "work"
+    tags: ["arun", "google", "distributed-systems", "hiring"]
+  - id: "f38"
+    fact: "Arun accepted the offer and starts three weeks after Maria"
+    category: "work"
+    tags: ["arun", "start-date", "hiring", "offer"]
+  - id: "f39"
+    fact: "The Felix engineering team currently has six members"
+    category: "work"
+    tags: ["team-size", "engineering", "headcount"]
+  - id: "f40"
+    fact: "Marcus works on infrastructure and has a performance review coming up"
+    category: "work"
+    tags: ["marcus", "infrastructure", "performance-review"]
+
+  # ── Technical Decisions (f41–f70) ─────────────────────────────────────
+  - id: "f41"
+    fact: "Felix is migrating from legacy REST endpoints to a new GraphQL API layer"
+    category: "work"
+    tags: ["graphql", "rest", "migration", "api"]
+  - id: "f42"
+    fact: "The auth middleware handles complex token refresh edge cases during API migration"
+    category: "work"
+    tags: ["auth", "token-refresh", "middleware", "api"]
+  - id: "f43"
+    fact: "Redis is used for caching with a 60-second TTL on the waitlist endpoint"
+    category: "work"
+    tags: ["redis", "caching", "ttl", "waitlist"]
+  - id: "f44"
+    fact: "Sentry is used for error monitoring, currently tracking about 30 unhandled exceptions per day"
+    category: "work"
+    tags: ["sentry", "monitoring", "errors", "observability"]
+  - id: "f45"
+    fact: "The Felix backend is written in Python"
+    category: "work"
+    tags: ["python", "backend", "language", "tech-stack"]
+  - id: "f46"
+    fact: "Event sourcing was chosen over traditional CRUD for the activity feed implementation"
+    category: "work"
+    tags: ["event-sourcing", "activity-feed", "architecture", "decision"]
+  - id: "f47"
+    fact: "The notification service uses an event bus pattern introduced during Priya's refactor"
+    category: "work"
+    tags: ["notification", "event-bus", "architecture", "pattern"]
+  - id: "f48"
+    fact: "SSE was chosen over WebSockets for GraphQL subscriptions due to simplicity and proxy compatibility"
+    category: "work"
+    tags: ["sse", "websockets", "graphql", "subscriptions"]
+  - id: "f49"
+    fact: "PostgreSQL is the primary database, proven reliable with great tooling"
+    category: "work"
+    tags: ["postgresql", "database", "primary", "tech-stack"]
+  - id: "f50"
+    fact: "PgBouncer is used for connection pooling in transaction mode after Maria's optimization"
+    category: "work"
+    tags: ["pgbouncer", "connection-pooling", "transaction-mode"]
+  - id: "f51"
+    fact: "InfluxDB was chosen for analytics time-series data to keep the workload separate from main PostgreSQL"
+    category: "work"
+    tags: ["influxdb", "analytics", "time-series", "database"]
+  - id: "f52"
+    fact: "CloudFront CDN is used for serving template assets with gzip compression"
+    category: "work"
+    tags: ["cloudfront", "cdn", "template-assets", "compression"]
+  - id: "f53"
+    fact: "Feature flags are implemented as a Redis-backed JSON config with admin API"
+    category: "work"
+    tags: ["feature-flags", "redis", "json-config", "admin"]
+  - id: "f54"
+    fact: "Blue-green deployment with health checks and automatic rollback is the release strategy"
+    category: "work"
+    tags: ["blue-green", "deployment", "health-checks", "rollback"]
+  - id: "f55"
+    fact: "Template versioning uses content-addressed storage for immutable versions and free deduplication"
+    category: "work"
+    tags: ["template-versioning", "content-addressed", "immutable", "storage"]
+  - id: "f56"
+    fact: "The component library is built on Radix UI primitives for accessibility with custom styling"
+    category: "work"
+    tags: ["radix-ui", "component-library", "accessibility", "frontend"]
+  - id: "f57"
+    fact: "k6 is the load testing tool, simulating 1000 concurrent users through critical flows"
+    category: "work"
+    tags: ["k6", "load-testing", "performance", "concurrent-users"]
+  - id: "f58"
+    fact: "OpenTelemetry is used for distributed tracing with Jaeger UI for visualization"
+    category: "work"
+    tags: ["opentelemetry", "jaeger", "distributed-tracing", "observability"]
+  - id: "f59"
+    fact: "Intercom is used for customer support live chat during beta"
+    category: "work"
+    tags: ["intercom", "support", "live-chat", "customer"]
+  - id: "f60"
+    fact: "DataDog is used for infrastructure monitoring dashboards and alerting"
+    category: "work"
+    tags: ["datadog", "monitoring", "dashboards", "infrastructure"]
+  - id: "f61"
+    fact: "PCI SAQ-A self-assessment is required for the billing integration"
+    category: "work"
+    tags: ["pci", "compliance", "billing", "security"]
+  - id: "f62"
+    fact: "Certbot with cron handles SSL for staging, ACM behind load balancer for production"
+    category: "work"
+    tags: ["ssl", "certbot", "acm", "certificate"]
+  - id: "f63"
+    fact: "The CI pipeline runs integration tests that take 45 minutes and have been flaky"
+    category: "work"
+    tags: ["ci", "integration-tests", "pipeline", "flaky"]
+  - id: "f64"
+    fact: "Terraform for infrastructure was deferred to post-launch, currently using manual EC2 configuration"
+    category: "work"
+    tags: ["terraform", "ec2", "infrastructure", "deferred"]
+  - id: "f65"
+    fact: "Database migration scripts have a rollback script as safety net for production"
+    category: "work"
+    tags: ["database-migration", "rollback", "safety", "production"]
+  - id: "f66"
+    fact: "Expensify is used for expense reports replacing the old spreadsheet system"
+    category: "work"
+    tags: ["expensify", "expense-reports", "admin", "tools"]
+  - id: "f67"
+    fact: "The template engine supports nested components and dynamic data binding"
+    category: "work"
+    tags: ["template-engine", "components", "data-binding", "rendering"]
+  - id: "f68"
+    fact: "PagerDuty is used for on-call alert routing with a two-person weekly rotation"
+    category: "work"
+    tags: ["pagerduty", "on-call", "alerting", "rotation"]
+  - id: "f69"
+    fact: "LaunchDarkly was evaluated but rejected in favor of a simpler homegrown feature flag system"
+    category: "work"
+    tags: ["launchdarkly", "feature-flags", "decision", "cost"]
+  - id: "f70"
+    fact: "Lambda serverless was evaluated early on but cold start times were a dealbreaker"
+    category: "work"
+    tags: ["lambda", "serverless", "cold-start", "decision"]
+
+  # ── Business Metrics (f71–f95) ────────────────────────────────────────
+  - id: "f71"
+    fact: "The Felix waitlist has 12,000 signups, about double the original projection"
+    category: "work"
+    tags: ["waitlist", "signups", "12k", "growth"]
+  - id: "f72"
+    fact: "Landing page conversion rate dropped from 3.4% to 2.8% last week"
+    category: "work"
+    tags: ["conversion-rate", "landing-page", "metrics", "decline"]
+  - id: "f73"
+    fact: "Sentry is tracking about 30 unhandled exceptions per day, mostly in PDF service"
+    category: "work"
+    tags: ["exceptions", "sentry", "pdf", "errors"]
+  - id: "f74"
+    fact: "API P99 latency increased from 200ms to 450ms on the waitlist endpoint"
+    category: "work"
+    tags: ["latency", "p99", "api", "waitlist"]
+  - id: "f75"
+    fact: "Monthly burn rate is $87K with 14 months of runway remaining"
+    category: "work"
+    tags: ["burn-rate", "runway", "finance", "monthly"]
+  - id: "f76"
+    fact: "Monthly salary expenses are $62K across the team"
+    category: "work"
+    tags: ["salaries", "expenses", "team", "finance"]
+  - id: "f77"
+    fact: "Infrastructure costs are $11K per month on AWS"
+    category: "work"
+    tags: ["infrastructure", "aws", "costs", "monthly"]
+  - id: "f78"
+    fact: "SaaS tool spending is $8K per month across 18 different services"
+    category: "work"
+    tags: ["saas", "tools", "spending", "subscriptions"]
+  - id: "f79"
+    fact: "Miscellaneous expenses are approximately $6K per month"
+    category: "work"
+    tags: ["expenses", "miscellaneous", "monthly", "finance"]
+  - id: "f80"
+    fact: "A/B test winning variant achieved 4.1% conversion versus 2.8% on control"
+    category: "work"
+    tags: ["ab-test", "conversion", "landing-page", "improvement"]
+  - id: "f81"
+    fact: "Users who complete onboarding in the first 10 minutes have 70% day-7 retention"
+    category: "work"
+    tags: ["onboarding", "retention", "metrics", "activation"]
+  - id: "f82"
+    fact: "Users who do not complete onboarding drop to 20% day-7 retention"
+    category: "work"
+    tags: ["onboarding", "retention", "drop-off", "churn"]
+  - id: "f83"
+    fact: "Sprint velocity has been trending up: 34 to 41 to 47 story points over three sprints"
+    category: "work"
+    tags: ["velocity", "story-points", "sprint", "improvement"]
+  - id: "f84"
+    fact: "Load tests show the system handles 1200 concurrent users with p99 latency under 300ms"
+    category: "work"
+    tags: ["load-test", "concurrent-users", "latency", "performance"]
+  - id: "f85"
+    fact: "The penetration test cost $15K for a comprehensive web app security audit"
+    category: "work"
+    tags: ["pentest", "cost", "security", "audit"]
+  - id: "f86"
+    fact: "The design contractor quoted $3K for six landing page illustrations"
+    category: "work"
+    tags: ["contractor", "illustrations", "cost", "design"]
+  - id: "f87"
+    fact: "Beta invite email winning subject line has a 45% open rate"
+    category: "work"
+    tags: ["email", "open-rate", "beta", "invite"]
+  - id: "f88"
+    fact: "Template preview generation was optimized from 3 seconds to 800ms"
+    category: "work"
+    tags: ["template-preview", "performance", "optimization", "latency"]
+  - id: "f89"
+    fact: "Marketing site Lighthouse score improved from 72 to 88 after optimizations"
+    category: "work"
+    tags: ["lighthouse", "performance", "score", "web-vitals"]
+  - id: "f90"
+    fact: "The final staging test suite has 847 tests, all passing green"
+    category: "work"
+    tags: ["tests", "staging", "passing", "qa"]
+  - id: "f91"
+    fact: "Winning beta invite email subject line is: You're in — start building with Felix"
+    category: "work"
+    tags: ["email", "subject-line", "beta", "copywriting"]
+  - id: "f92"
+    fact: "First hour after beta launch had 147 active users and 89 templates created"
+    category: "work"
+    tags: ["launch", "active-users", "templates", "metrics"]
+  - id: "f93"
+    fact: "The CI pipeline takes 45 minutes to run, mostly in integration tests"
+    category: "work"
+    tags: ["ci", "pipeline", "runtime", "integration-tests"]
+  - id: "f94"
+    fact: "Office lease rent is increasing by 8% at the Koramangala location"
+    category: "work"
+    tags: ["office", "rent", "increase", "koramangala"]
+  - id: "f95"
+    fact: "The team completed 47 story points in the most recent sprint"
+    category: "work"
+    tags: ["sprint", "velocity", "story-points", "completed"]
+
+  # ── External Contacts (f96–f115) ──────────────────────────────────────
+  - id: "f96"
+    fact: "An investor contact mentioned developer tools are getting more VC attention this quarter"
+    category: "work"
+    tags: ["investor", "vc", "developer-tools", "funding"]
+  - id: "f97"
+    fact: "A design influencer with 200K followers wants to do a sponsored review of Felix"
+    category: "work"
+    tags: ["influencer", "200k-followers", "review", "partnership"]
+  - id: "f98"
+    fact: "Austin Tech Summit confirmed a 30-minute speaking slot plus Q&A"
+    category: "work"
+    tags: ["austin", "conference", "speaking-slot", "30-minutes"]
+  - id: "f99"
+    fact: "Austin Tech Summit audience is CTOs and senior engineers from 50-500 person startups"
+    category: "work"
+    tags: ["austin", "conference", "audience", "ctos"]
+  - id: "f100"
+    fact: "The Austin Tech Summit conference is six weeks away from the journal date"
+    category: "work"
+    tags: ["austin", "conference", "timeline", "six-weeks"]
+  - id: "f101"
+    fact: "A TechCrunch reporter confirmed a brief mention in her Friday developer tools roundup"
+    category: "work"
+    tags: ["techcrunch", "reporter", "press", "coverage"]
+  - id: "f102"
+    fact: "The company accountant handles quarterly tax filing and R&D tax credit documentation"
+    category: "work"
+    tags: ["accountant", "taxes", "r&d-credit", "quarterly"]
+  - id: "f103"
+    fact: "The R&D tax credit estimate is approximately $40K based on engineering salaries"
+    category: "work"
+    tags: ["r&d-credit", "tax", "40k", "engineering"]
+  - id: "f104"
+    fact: "A VC reached out cold after seeing the waitlist growth numbers"
+    category: "work"
+    tags: ["vc", "cold-outreach", "waitlist", "fundraising"]
+  - id: "f105"
+    fact: "A friend who runs a startup incubator invited a talk to his next cohort"
+    category: "work"
+    tags: ["incubator", "speaking", "friend", "startup"]
+  - id: "f106"
+    fact: "An advisory board member is a former Netlify executive"
+    category: "work"
+    tags: ["advisor", "netlify", "board", "experience"]
+  - id: "f107"
+    fact: "Advisory board recommended more getting-started tutorials in the developer docs"
+    category: "work"
+    tags: ["advisor", "tutorials", "docs", "recommendation"]
+  - id: "f108"
+    fact: "The insurance broker is handling D&O policy updates for team expansion"
+    category: "work"
+    tags: ["insurance", "broker", "d&o", "policy"]
+  - id: "f109"
+    fact: "The recruiter has been sending batches of candidates for the senior backend role"
+    category: "work"
+    tags: ["recruiter", "candidates", "backend", "hiring"]
+  - id: "f110"
+    fact: "A security firm conducted the penetration test and found no critical vulnerabilities"
+    category: "work"
+    tags: ["security-firm", "pentest", "vulnerabilities", "audit"]
+  - id: "f111"
+    fact: "A design contractor delivered six landing page illustrations for $3K"
+    category: "work"
+    tags: ["contractor", "illustrations", "design", "landing-page"]
+  - id: "f112"
+    fact: "The landlord is raising rent 8% on the Koramangala office lease renewal"
+    category: "work"
+    tags: ["landlord", "rent", "koramangala", "lease"]
+  - id: "f113"
+    fact: "Maria's former Stripe manager called her one of the best engineers he ever worked with"
+    category: "work"
+    tags: ["maria", "reference", "stripe", "endorsement"]
+  - id: "f114"
+    fact: "A potential enterprise customer wants to use Felix for their marketing team's landing pages"
+    category: "work"
+    tags: ["enterprise", "customer", "marketing", "landing-pages"]
+  - id: "f115"
+    fact: "The PR contact pitched Felix to the TechCrunch developer tools reporter"
+    category: "work"
+    tags: ["pr", "techcrunch", "pitch", "developer-tools"]
+
+  # ── Preferences (f116–f135) ───────────────────────────────────────────
+  - id: "f116"
+    fact: "Prefers morning deep work sessions before meetings start"
+    category: "preference"
+    tags: ["morning", "deep-work", "schedule", "productivity"]
+  - id: "f117"
+    fact: "Prefers Python for backend development"
+    category: "preference"
+    tags: ["python", "backend", "language", "preference"]
+  - id: "f118"
+    fact: "Prefers async standups over daily synchronous meetings"
+    category: "preference"
+    tags: ["async", "standups", "meetings", "communication"]
+  - id: "f119"
+    fact: "Prefers staged rollouts over big bang launches for product releases"
+    category: "preference"
+    tags: ["staged-rollout", "launch", "deployment", "strategy"]
+  - id: "f120"
+    fact: "Prefers walking to the office through the park when weather permits"
+    category: "preference"
+    tags: ["walking", "commute", "park", "exercise"]
+  - id: "f121"
+    fact: "Prefers Turkish coffee as the morning beverage of choice"
+    category: "preference"
+    tags: ["turkish-coffee", "morning", "beverage", "preference"]
+  - id: "f122"
+    fact: "Uses a mechanical keyboard and values the typing experience"
+    category: "preference"
+    tags: ["mechanical-keyboard", "typing", "hardware", "preference"]
+  - id: "f123"
+    fact: "Prefers developer-first product positioning over no-code approach"
+    category: "preference"
+    tags: ["developer-first", "positioning", "product", "strategy"]
+  - id: "f124"
+    fact: "Believes a simple reliable tech stack beats cutting-edge complexity"
+    category: "preference"
+    tags: ["simple-stack", "reliability", "philosophy", "tech"]
+  - id: "f125"
+    fact: "Keeps investors regularly updated even when not actively fundraising"
+    category: "preference"
+    tags: ["investors", "updates", "communication", "fundraising"]
+  - id: "f126"
+    fact: "Uses net-30 payment terms for contractor invoices"
+    category: "preference"
+    tags: ["net-30", "contractors", "invoicing", "payments"]
+  - id: "f127"
+    fact: "Dislikes too many meetings that break up deep work focus time"
+    category: "preference"
+    tags: ["meetings", "deep-work", "focus", "productivity"]
+  - id: "f128"
+    fact: "Prefers three-sentence speaker bios that avoid sounding too corporate"
+    category: "preference"
+    tags: ["speaker-bio", "writing", "conferences", "preference"]
+  - id: "f129"
+    fact: "Requires code review before merge for all pull requests"
+    category: "preference"
+    tags: ["code-review", "pull-requests", "merge", "process"]
+  - id: "f130"
+    fact: "Wants to consolidate recurring meetings to preserve focus time"
+    category: "preference"
+    tags: ["meetings", "consolidate", "focus", "schedule"]
+  - id: "f131"
+    fact: "Prefers card-based UI layouts with drag-and-drop interaction patterns"
+    category: "preference"
+    tags: ["card-ui", "drag-drop", "design", "ux"]
+  - id: "f132"
+    fact: "Finds context switching between coding and management to be the hardest part of the CTO role"
+    category: "preference"
+    tags: ["context-switching", "management", "coding", "cto"]
+  - id: "f133"
+    fact: "Considers a five-minute standup to be the ideal meeting length"
+    category: "preference"
+    tags: ["standup", "meeting-length", "efficiency", "process"]
+  - id: "f134"
+    fact: "Prefers Tuesday for Product Hunt launches as it has the highest traffic day"
+    category: "preference"
+    tags: ["product-hunt", "tuesday", "launch-day", "strategy"]
+  - id: "f135"
+    fact: "Recently switched to noise-cancelling headphones for focused work in the growing office"
+    category: "preference"
+    tags: ["headphones", "noise-cancelling", "focus", "office"]
+
+  # ── Process/Workflows (f136–f155) ─────────────────────────────────────
+  - id: "f136"
+    fact: "Production deploys are scheduled during the Thursday night maintenance window"
+    category: "context"
+    tags: ["deploy", "thursday", "maintenance-window", "production"]
+  - id: "f137"
+    fact: "Weekly product updates are sent to the whole team summarizing progress"
+    category: "context"
+    tags: ["product-updates", "weekly", "team", "communication"]
+  - id: "f138"
+    fact: "Sprint retrospectives are held on Fridays at end of each sprint"
+    category: "context"
+    tags: ["retro", "friday", "sprint", "process"]
+  - id: "f139"
+    fact: "Code review is mandatory before any pull request can be merged"
+    category: "context"
+    tags: ["code-review", "pull-request", "merge", "policy"]
+  - id: "f140"
+    fact: "The team uses story point estimation for sprint planning"
+    category: "context"
+    tags: ["story-points", "sprint-planning", "estimation", "agile"]
+  - id: "f141"
+    fact: "On-call rotation is two-person weekly shifts with primary and secondary roles"
+    category: "context"
+    tags: ["on-call", "rotation", "weekly", "support"]
+  - id: "f142"
+    fact: "Beta invites go out in batches of 200 users every two hours on launch day"
+    category: "context"
+    tags: ["beta", "invites", "batches", "launch-day"]
+  - id: "f143"
+    fact: "Code freeze policy: only critical bug fixes after freeze, no feature changes"
+    category: "context"
+    tags: ["code-freeze", "bug-fixes", "policy", "release"]
+  - id: "f144"
+    fact: "Critical fix is defined as data loss, security vulnerability, or complete feature breakage"
+    category: "context"
+    tags: ["critical-fix", "definition", "data-loss", "security"]
+  - id: "f145"
+    fact: "Engineers rotate on customer support duty in Intercom one day per week"
+    category: "context"
+    tags: ["support", "rotation", "intercom", "engineers"]
+  - id: "f146"
+    fact: "Database migrations are also scheduled during the Thursday maintenance window"
+    category: "context"
+    tags: ["database-migration", "thursday", "maintenance", "schedule"]
+  - id: "f147"
+    fact: "AWS cost alerts need to be set up for non-production resources to prevent idle waste"
+    category: "context"
+    tags: ["aws", "cost-alerts", "staging", "waste"]
+  - id: "f148"
+    fact: "The team has a regular lunch tradition at a Thai restaurant near the office"
+    category: "context"
+    tags: ["team-lunch", "thai", "restaurant", "tradition"]
+  - id: "f149"
+    fact: "Sprint planning targets around 45 story points based on recent velocity"
+    category: "context"
+    tags: ["sprint-planning", "story-points", "target", "velocity"]
+  - id: "f150"
+    fact: "Blue-green deployment includes automatic rollback when health checks fail"
+    category: "context"
+    tags: ["blue-green", "rollback", "health-checks", "deployment"]
+  - id: "f151"
+    fact: "Post-incident reviews are scheduled after every production issue"
+    category: "context"
+    tags: ["post-incident", "review", "production", "process"]
+  - id: "f152"
+    fact: "Disaster recovery drills should be conducted regularly to verify backup restores"
+    category: "context"
+    tags: ["disaster-recovery", "drills", "backups", "verification"]
+  - id: "f153"
+    fact: "Feature flag rollouts support user-level targeting and percentage-based distribution"
+    category: "context"
+    tags: ["feature-flags", "targeting", "percentage", "rollout"]
+  - id: "f154"
+    fact: "Private beta uses invite codes sent via email to track acceptance rates"
+    category: "context"
+    tags: ["beta", "invite-codes", "email", "tracking"]
+  - id: "f155"
+    fact: "API documentation must be kept current with each sprint's changes"
+    category: "context"
+    tags: ["api-docs", "documentation", "sprint", "maintenance"]
+
+  # ── Project Context (f156–f180) ───────────────────────────────────────
+  - id: "f156"
+    fact: "Beta launch is targeting end of the current month with private invites"
+    category: "context"
+    tags: ["beta-launch", "end-of-month", "timeline", "private"]
+  - id: "f157"
+    fact: "Custom domain support was pushed to Q4 in the product roadmap"
+    category: "context"
+    tags: ["custom-domains", "q4", "roadmap", "deferred"]
+  - id: "f158"
+    fact: "A three-tier pricing model is planned for Felix"
+    category: "context"
+    tags: ["pricing", "three-tier", "model", "monetization"]
+  - id: "f159"
+    fact: "Free tier usage limits are still undecided, balancing value demonstration against cannibalization"
+    category: "context"
+    tags: ["free-tier", "limits", "pricing", "undecided"]
+  - id: "f160"
+    fact: "First beta cohort will be 500 users from the earliest waitlist signups"
+    category: "context"
+    tags: ["beta", "cohort", "500-users", "waitlist"]
+  - id: "f161"
+    fact: "Post-beta priorities in order: template marketplace, team collaboration, then analytics"
+    category: "context"
+    tags: ["roadmap", "marketplace", "collaboration", "priorities"]
+  - id: "f162"
+    fact: "The company applied to YC early on but was rejected"
+    category: "context"
+    tags: ["yc", "application", "rejected", "history"]
+  - id: "f163"
+    fact: "Felix targets developer-first users while competitors focus on no-code audience"
+    category: "context"
+    tags: ["developer-first", "positioning", "competitors", "market"]
+  - id: "f164"
+    fact: "The closest competitor just raised a Series A at $12M and is hiring sales aggressively"
+    category: "context"
+    tags: ["competitor", "series-a", "12m", "enterprise"]
+  - id: "f165"
+    fact: "Felix differentiates on self-serve developer experience versus competitor enterprise focus"
+    category: "context"
+    tags: ["differentiation", "self-serve", "developer", "enterprise"]
+  - id: "f166"
+    fact: "Template marketplace will use a Pinterest-style masonry grid for browsing"
+    category: "context"
+    tags: ["marketplace", "pinterest", "masonry", "browsing"]
+  - id: "f167"
+    fact: "The new onboarding tutorial reduces time-to-first-publish from 12 minutes to 3 minutes"
+    category: "context"
+    tags: ["onboarding", "time-to-value", "3-minutes", "improvement"]
+  - id: "f168"
+    fact: "Launch day plan: Product Hunt at 9am, blog at 10am, Twitter at noon, Hacker News at 3pm"
+    category: "context"
+    tags: ["launch-day", "product-hunt", "hacker-news", "timeline"]
+  - id: "f169"
+    fact: "Launch blog post feedback: focus on problems solved, not feature lists"
+    category: "context"
+    tags: ["blog", "copywriting", "feedback", "launch"]
+  - id: "f170"
+    fact: "Zapier integration is being explored to connect Felix with thousands of other apps"
+    category: "context"
+    tags: ["zapier", "integration", "automation", "ecosystem"]
+  - id: "f171"
+    fact: "Native integrations with Mailchimp, HubSpot, and Google Analytics are on the roadmap"
+    category: "context"
+    tags: ["mailchimp", "hubspot", "analytics", "integrations"]
+  - id: "f172"
+    fact: "The team is considering migrating the frontend from JavaScript to TypeScript"
+    category: "context"
+    tags: ["typescript", "javascript", "migration", "frontend"]
+  - id: "f173"
+    fact: "Legacy REST endpoints have a three-month sunset period after beta launch"
+    category: "context"
+    tags: ["rest", "sunset", "three-months", "deprecation"]
+  - id: "f174"
+    fact: "The template editor has an emoji rendering bug, needs system font fallback"
+    category: "context"
+    tags: ["emoji", "font", "bug", "template-editor"]
+  - id: "f175"
+    fact: "Enterprise customers are asking for SSO and role-based access control"
+    category: "context"
+    tags: ["sso", "rbac", "enterprise", "feature-request"]
+  - id: "f176"
+    fact: "Conference talk title is Building Developer Tools That Developers Actually Want"
+    category: "context"
+    tags: ["talk-title", "conference", "developer-tools", "austin"]
+  - id: "f177"
+    fact: "The beta invite system tracks acceptance rates as a key metric"
+    category: "context"
+    tags: ["beta", "acceptance-rate", "metrics", "invite"]
+  - id: "f178"
+    fact: "Launch day deployment starts at 6am with the team arriving by 5:30am"
+    category: "context"
+    tags: ["launch-day", "6am", "deployment", "team"]
+  - id: "f179"
+    fact: "Auto-scaling triggers when CPU exceeds 70% on t3.xlarge instances behind ALB"
+    category: "context"
+    tags: ["auto-scaling", "cpu", "alb", "ec2"]
+  - id: "f180"
+    fact: "Production runs on t3.xlarge behind ALB, RDS db.r6g.large, Redis cache.m6g.large"
+    category: "context"
+    tags: ["infrastructure", "ec2", "rds", "redis"]
+
+  # ── Personal (f181–f200) ──────────────────────────────────────────────
+  - id: "f181"
+    fact: "Office is located in Koramangala, Bangalore"
+    category: "personal"
+    tags: ["office", "koramangala", "bangalore", "location"]
+  - id: "f182"
+    fact: "The walking route to office goes through a park that is pleasant before it gets crowded"
+    category: "personal"
+    tags: ["walking", "park", "commute", "morning"]
+  - id: "f183"
+    fact: "Does best thinking in the quiet office before the team arrives and Slack pings start"
+    category: "personal"
+    tags: ["thinking", "quiet", "morning", "focus"]
+  - id: "f184"
+    fact: "The deli across the street from the office makes a good turkey club sandwich"
+    category: "personal"
+    tags: ["deli", "turkey-club", "lunch", "office"]
+  - id: "f185"
+    fact: "Birthday is September 12th"
+    category: "personal"
+    tags: ["birthday", "september", "personal", "date"]
+  - id: "f186"
+    fact: "Has a sister who helps coordinate family gifts and events"
+    category: "personal"
+    tags: ["sister", "family", "gifts", "coordination"]
+  - id: "f187"
+    fact: "Mom wants a new e-reader as a birthday gift, coordinating with sister"
+    category: "personal"
+    tags: ["mom", "e-reader", "birthday", "gift"]
+  - id: "f188"
+    fact: "College roommate is planning a reunion dinner next month"
+    category: "personal"
+    tags: ["college", "roommate", "reunion", "dinner"]
+  - id: "f189"
+    fact: "Recently bought noise-cancelling headphones to deal with growing office noise"
+    category: "personal"
+    tags: ["headphones", "noise-cancelling", "purchase", "office"]
+  - id: "f190"
+    fact: "Car had a check engine light, likely the O2 sensor which is a $200 fix"
+    category: "personal"
+    tags: ["car", "check-engine", "o2-sensor", "repair"]
+  - id: "f191"
+    fact: "Has a prescription waiting at the pharmacy for three days"
+    category: "personal"
+    tags: ["prescription", "pharmacy", "health", "errands"]
+  - id: "f192"
+    fact: "Enjoys watching basketball and has season tickets for local games"
+    category: "personal"
+    tags: ["basketball", "tickets", "sports", "hobby"]
+  - id: "f193"
+    fact: "The team's regular Thai restaurant is on or near Market Street"
+    category: "personal"
+    tags: ["thai", "restaurant", "market-street", "food"]
+  - id: "f194"
+    fact: "Has been eating too much takeout lately and wants to cook more at home"
+    category: "personal"
+    tags: ["cooking", "takeout", "health", "home"]
+  - id: "f195"
+    fact: "Applied to YC early on but was rejected before eventually finding traction"
+    category: "personal"
+    tags: ["yc", "rejection", "startup", "history"]
+  - id: "f196"
+    fact: "Started the company originally as a solo founder before building the team"
+    category: "personal"
+    tags: ["solo-founder", "origin", "startup", "history"]
+  - id: "f197"
+    fact: "The first hire at Felix did not work out and had to let them go"
+    category: "personal"
+    tags: ["first-hire", "failure", "startup", "lesson"]
+  - id: "f198"
+    fact: "Enjoys rainy mornings as perfect coding weather for focused work"
+    category: "personal"
+    tags: ["rain", "coding", "weather", "focus"]
+  - id: "f199"
+    fact: "Walks through the park on the way to the office in the morning for a mood boost"
+    category: "personal"
+    tags: ["park", "morning-walk", "mood", "routine"]
+  - id: "f200"
+    fact: "Values the feeling of building something real with a great team over pure engineering work"
+    category: "personal"
+    tags: ["building", "team", "values", "leadership"]

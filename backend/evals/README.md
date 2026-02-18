@@ -23,10 +23,14 @@ uv run python -m evals.run --component freewrite
 uv run python -m evals.run --component search
 uv run python -m evals.run --component triage
 
-# 4. Control runs per scenario (default: 3)
+# 4. Run a specific group (substring match on group name)
+uv run python -m evals.run --component triage --group startup_founder
+uv run python -m evals.run --component triage --group small_baseline
+
+# 5. Control runs per scenario (default: 3)
 uv run python -m evals.run --runs 5
 
-# 5. Set logging level for debugging (default: error)
+# 6. Filter scenarios + set log level for debugging
 uv run python -m evals.run --component triage --scenario no_duplicate --log-level info
 ```
 
@@ -49,21 +53,27 @@ evals/
 ├── eval_triage_agent.py            # triage agent evaluator
 ├── datasets/
 │   ├── fixtures/                   # fixture sets (Qdrant data)
-│   │   └── full.yaml
+│   │   ├── full.yaml               # small baseline (5 todos, 4 facts)
+│   │   └── startup_founder.yaml    # large-scale (100 todos, 200 facts)
 │   ├── freewrite_processor.yaml    # freewrite test scenarios
 │   ├── freewrite_inputs/           # long-form document files for sliding window evals
 │   │   └── startup_journal.txt
 │   ├── search.yaml                 # search test scenarios
-│   └── triage_agent.yaml           # triage test scenarios
+│   ├── triage_agent.yaml           # triage test scenarios
+│   └── daemon_processor.yaml       # daemon test scenarios
 └── fixture_data/                   # generated (git-ignored) — pre-computed embeddings
-    └── full/
-        ├── todos.json
-        └── facts.json
+    ├── full/
+    └── startup_founder/
 ```
 
 ## Fixtures
 
 Fixtures define the todos and facts that get loaded into Qdrant test collections before scenarios run. Each YAML file in `datasets/fixtures/` is a named fixture set.
+
+| Fixture | Size | Purpose |
+|---------|------|---------|
+| `full.yaml` | 5 todos, 4 facts | Small baseline for quick sanity checks |
+| `startup_founder.yaml` | 100 todos, 200 facts | Large-scale precision tests based on startup journal persona |
 
 **`datasets/fixtures/full.yaml`** (example):
 
@@ -96,15 +106,16 @@ Scenario files use a `groups` structure. Each group has a name, an optional `fix
 
 ```yaml
 groups:
-  - name: full_collection
-    fixtures: full           # references datasets/fixtures/full.yaml
+  - name: small_baseline
+    fixtures: full               # references datasets/fixtures/full.yaml
     scenarios:
       - id: my_test
         ...
 
-  - name: empty_collection   # no fixtures — runs against empty Qdrant collections
+  - name: startup_founder
+    fixtures: startup_founder    # references datasets/fixtures/startup_founder.yaml
     scenarios:
-      - id: cold_start_test
+      - id: status_start_crowded
         ...
 ```
 

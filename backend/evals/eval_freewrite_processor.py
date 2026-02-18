@@ -76,13 +76,15 @@ def _resolve_scenario(scenario: dict, paragraphs: list[str] | None) -> dict:
     return resolved
 
 
-def run(runs: int = 3, scenario_filter: str | None = None) -> list[ScenarioResult]:
+def run(runs: int = 3, scenario_filter: str | None = None, group_filter: str | None = None) -> list[ScenarioResult]:
     """Run freewrite processor eval scenarios, optionally filtered by ID substring."""
     with open(DATASETS_DIR / "freewrite_processor.yaml") as f:
         data = yaml.safe_load(f)
 
     results = []
     for group in data["groups"]:
+        if group_filter and group_filter not in group.get("name", ""):
+            continue
         scenarios = [s for s in group["scenarios"] if not scenario_filter or scenario_filter in s["id"]]
         if not scenarios:
             continue
