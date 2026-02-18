@@ -100,7 +100,7 @@ All freewrite session data goes to our backend where it's stored in a Postgres t
 
 We can add a 24 hour erase mechanism onto this as well. All important data gets distilled down to facts that are stored in our vector database anyway.
 
-For speech, we directly connect the user to OpenAI using a one time use token. OpenAI returns transcripts directly to the user which are written onto the freewrite document.
+For speech, the frontend streams mic audio over a WebSocket to our backend, which proxies it to Mistral's Voxtral realtime transcription API. Transcript deltas are relayed back to the frontend and written onto the freewrite document.
 
 #### Daemon
 
@@ -177,11 +177,9 @@ This also highlights how I'd like to approach applied AI here, in the sense that
 
 #### One week
 
-1. Adding live transcription using the newly released Mistral models.
+1. Add entities like people, work (repository), team or some grouping that is grounded.
 
-2. Add entities like people, work (repository), team or some grouping that is grounded.
-
-3. Creating more scenarios for evals.
+2. Create more scenarios for eval based testing.
 
 #### Further improvements
 

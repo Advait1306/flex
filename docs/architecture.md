@@ -55,7 +55,7 @@ Todos and facts live in Qdrant, not Postgres.
 | `/api/todos/{id}`            | PATCH  | Update a todo                                     |
 | `/api/todos/{id}`            | DELETE | Delete a todo                                     |
 | `/api/facts`                 | GET    | List all facts (read-only, created by AI)         |
-| `/api/transcription/session` | POST   | Get ephemeral OpenAI token for voice transcription |
+| `/api/transcription/ws`      | WS     | Authenticated WebSocket proxy for Mistral voice transcription |
 | `/api/daemon/snapshot`       | POST   | Receive daemon accessibility tree snapshot        |
 
 ### AI Agent Pipeline (`ai/`)
@@ -125,13 +125,14 @@ Minimal BlockNote editor (no menus, no toolbar — just text input). Smart auto-
 
 ### Voice Input (`hooks/useRealtimeTranscription.ts`)
 
-1. Backend issues ephemeral OpenAI token (`POST /api/transcription/session`)
-2. Frontend opens WebSocket directly to OpenAI Realtime API
-3. Mic audio captured at 24kHz via ScriptProcessor, converted to PCM16/Base64, sent via WebSocket
-4. OpenAI handles VAD + transcription server-side (`gpt-4o-transcribe`)
-5. Completed transcription inserted into editor, triggering the save → AI pipeline flow
+1. Frontend opens WebSocket to backend (`/api/transcription/ws?token=...`), authenticated via Basic auth token
+2. Backend proxies audio to Mistral's Voxtral realtime transcription API (`voxtral-mini-transcribe-realtime-2602`) using the `mistralai` SDK
+3. Mic audio captured at 16kHz via ScriptProcessor, converted to PCM16, sent as binary frames
+4. Client-side VAD (RMS-based) detects speech activity for UI feedback
+5. Mistral streams transcript deltas back through the backend WebSocket to the frontend
+6. Deltas appended to a dedicated editor block, triggering the save → AI pipeline flow
 
-Voice button shows multi-state feedback: amber pulse while connecting, green pulse while speaking, blue while transcribing.
+Voice button shows multi-state feedback via `MicState` enum: amber pulse while connecting, green pulse while speaking, amber pulse while listening.
 
 ### Auth (`components/AuthGate.tsx`)
 
@@ -168,23 +169,24 @@ flowchart TD
 
 ```mermaid
 flowchart TD
-    A[Mic button clicked] --> B[Get ephemeral OpenAI token]
-    B --> C[Open WebSocket to OpenAI Realtime API]
-    C --> D[Stream audio, VAD + transcription server-side]
-    D --> E[Transcription inserted into BlockEditor]
-    E --> F[Auto-save calls PUT /api/freewrite]
-    F --> G[Compute diff — old vs new text]
-    G --> H[Save to Postgres]
-    H --> I[Enqueue PipelineTrigger]
-    I --> J[Freewrite Processor extracts items via LLM]
-    J --> K[Fan out to Triage Agents — one per item]
-    K --> L[Search existing todos/facts in Qdrant]
-    L --> M{Decide action}
-    M --> N[create_todo]
-    M --> O[update_todo]
-    M --> P[save_fact]
-    M --> Q[update_fact]
-    M --> R[do_nothing]
+    A[Mic button clicked] --> B[Open WebSocket to backend /api/transcription/ws]
+    B --> C[Stream PCM16 audio as binary frames]
+    C --> D[Backend proxies to Mistral Voxtral realtime API]
+    D --> E[Transcript deltas streamed back to frontend]
+    E --> F[Deltas appended to editor block]
+    F --> G[Auto-save calls PUT /api/freewrite]
+    G --> H[Compute diff — old vs new text]
+    H --> I[Save to Postgres]
+    I --> J[Enqueue PipelineTrigger]
+    J --> K[Freewrite Processor extracts items via LLM]
+    K --> L[Fan out to Triage Agents — one per item]
+    L --> M[Search existing todos/facts in Qdrant]
+    M --> N{Decide action}
+    N --> O[create_todo]
+    N --> P[update_todo]
+    N --> Q[save_fact]
+    N --> R[update_fact]
+    N --> S[do_nothing]
 ```
 
 ### Daemon Snapshot → Todos/Facts
