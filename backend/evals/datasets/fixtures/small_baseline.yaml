@@ -1,0 +1,44 @@
+todos:
+  - id: "t1"
+    title: "Buy groceries"
+    description: "milk, eggs, bread"
+    status: "pending"
+    tags: ["groceries", "shopping"]
+  - id: "t2"
+    title: "Fix authentication bug"
+    description: "Users can't login with OAuth, getting 403 error"
+    status: "in_progress"
+    tags: ["auth", "bug", "OAuth", "login"]
+  - id: "t3"
+    title: "Set up waitlist for Felix"
+    description: "Build a simple waitlist page for the Felix product launch"
+    status: "pending"
+    tags: ["waitlist", "felix", "launch"]
+  - id: "t4"
+    title: "Buy billboards for BLR"
+    description: "Purchase billboard advertising space in Bangalore"
+    status: "pending"
+    tags: ["billboard", "BLR", "advertising", "marketing"]
+  - id: "t5"
+    title: "Call dentist for appointment"
+    description: ""
+    status: "pending"
+    tags: ["dentist", "health", "appointment"]
+
+facts:
+  - id: "f1"
+    fact: "User's preferred programming language is Python"
+    category: "preference"
+    tags: ["programming", "python", "language"]
+  - id: "f2"
+    fact: "User works at a startup called Felix"
+    category: "work"
+    tags: ["work", "Felix", "startup"]
+  - id: "f3"
+    fact: "User's team member Sabesh handles frontend development"
+    category: "work"
+    tags: ["team", "Sabesh", "frontend"]
+  - id: "f4"
+    fact: "Project uses SuperMemory for vector and graph DB storage, with a plan to roll own Qdrant and Neo4j infra later"
+    category: "work"
+    tags: ["SuperMemory", "storage", "Qdrant", "Neo4j"]

@@ -68,13 +68,15 @@ def _evaluate_once(scenario: dict) -> dict[str, bool]:
     return checks
 
 
-def run(runs: int = 3, scenario_filter: str | None = None) -> list[ScenarioResult]:
+def run(runs: int = 3, scenario_filter: str | None = None, group_filter: str | None = None) -> list[ScenarioResult]:
     """Run daemon processor eval scenarios, optionally filtered by ID substring."""
     with open(DATASETS_DIR / "daemon_processor.yaml") as f:
         data = yaml.safe_load(f)
 
     results = []
     for group in data["groups"]:
+        if group_filter and group_filter not in group.get("name", ""):
+            continue
         for scenario in group["scenarios"]:
             if scenario_filter and scenario_filter not in scenario["id"]:
                 continue

@@ -112,3 +112,144 @@ groups:
           min_items: 1
           items_contain: ["CI", "design approval"]
           context_contains: ["payments"]
+
+  # Startup journal scenarios — each trigger_line is a paragraph index in the document.
+  # trigger = paragraph at that index, document_context = all preceding paragraphs joined.
+  - name: long_context_early
+    document_file: freewrite_inputs/startup_journal.txt
+    scenarios:
+      - id: journal_groceries
+        trigger_line: 8
+        expect:
+          action: triage
+          min_items: 1
+          items_contain: ["groceries"]
+
+      - id: journal_noise_morning
+        trigger_line: 15
+        expect:
+          action: do_nothing
+
+      - id: journal_dentist
+        trigger_line: 25
+        expect:
+          action: triage
+          min_items: 1
+          items_contain: ["dentist"]
+
+      - id: journal_budget_review
+        trigger_line: 42
+        expect:
+          action: triage
+          min_items: 1
+          items_contain: ["budget review"]
+
+      - id: journal_noise_quarter
+        trigger_line: 60
+        expect:
+          action: do_nothing
+
+      - id: journal_onboarding_docs
+        trigger_line: 78
+        expect:
+          action: triage
+          min_items: 1
+          items_contain: ["onboarding"]
+
+  - name: long_context_mid
+    document_file: freewrite_inputs/startup_journal.txt
+    scenarios:
+      - id: journal_api_docs
+        trigger_line: 100
+        expect:
+          action: triage
+          min_items: 1
+          items_contain: ["API documentation"]
+
+      - id: journal_noise_weather
+        trigger_line: 120
+        expect:
+          action: do_nothing
+
+      - id: journal_conference_flights
+        trigger_line: 150
+        expect:
+          action: triage
+          min_items: 1
+          items_contain: ["flights"]
+
+      - id: journal_noise_philosophical
+        trigger_line: 175
+        expect:
+          action: do_nothing
+
+      - id: journal_design_approval
+        trigger_line: 180
+        expect:
+          action: triage
+          min_items: 1
+          items_contain: ["design approval"]
+          context_contains: ["homepage redesign"]
+
+      - id: journal_marcus_review
+        trigger_line: 200
+        expect:
+          action: triage
+          min_items: 1
+          items_contain: ["Marcus"]
+
+      - id: journal_ci_pipeline
+        trigger_line: 240
+        expect:
+          action: triage
+          min_items: 1
+          items_contain: ["CI"]
+
+  - name: long_context_late
+    document_file: freewrite_inputs/startup_journal.txt
+    scenarios:
+      - id: journal_noise_lunch
+        trigger_line: 250
+        expect:
+          action: do_nothing
+
+      - id: journal_grant_proposal
+        trigger_line: 280
+        expect:
+          action: triage
+          min_items: 1
+          items_contain: ["grant proposal"]
+
+      - id: journal_vendor_contract
+        trigger_line: 300
+        expect:
+          action: triage
+          min_items: 1
+          items_contain: ["Datastream"]
+          context_contains: ["vendor contract"]
+
+      - id: journal_noise_office
+        trigger_line: 320
+        expect:
+          action: do_nothing
+
+      - id: journal_okr_update
+        trigger_line: 330
+        expect:
+          action: triage
+          min_items: 1
+          items_contain: ["OKR"]
+
+      - id: journal_kitchen_faucet
+        trigger_line: 350
+        expect:
+          action: triage
+          min_items: 1
+          items_contain: ["landlord"]
+
+      - id: journal_investor_deck
+        trigger_line: 390
+        expect:
+          action: triage
+          min_items: 1
+          items_contain: ["slide deck"]

@@ -1,6 +1,6 @@
 groups:
-  - name: full_collection
-    fixtures: full
+  - name: small_baseline
+    fixtures: small_baseline
     scenarios:
       - id: exact_keyword_match
         type: todos

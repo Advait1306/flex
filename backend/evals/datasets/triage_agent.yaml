@@ -1,6 +1,6 @@
 groups:
-  - name: full_collection
-    fixtures: full
+  - name: small_baseline
+    fixtures: small_baseline
     scenarios:
       - id: create_new_unrelated
         item:
@@ -129,6 +129,217 @@ groups:
       - id: no_duplicate_fact
         item:
           text: "We use SuperMemory for vector and graph storage"
+          context: ""
+        expect:
+          action: do_nothing
+
+  # ── Startup Founder (large-scale precision tests) ─────────────────────
+  # ~100 todos and ~200 facts from the Felix startup journal persona.
+  # Tests the agent's ability to search precisely among many similar items.
+  - name: startup_founder
+    fixtures: startup_founder
+    scenarios:
+
+      # ── create_todo at scale ──────────────────────────────────────────
+      - id: create_unrelated_at_scale
+        item:
+          text: "Set up a home office standing desk"
+          context: ""
+        expect:
+          action: create_todo
+          args_contain:
+            title: ["standing desk"]
+
+      - id: create_subtask_crowded_domain
+        item:
+          text: "write integration tests for the new GraphQL auth middleware"
+          context: "API migration"
+        expect:
+          action: create_todo
+          args_contain:
+            title: ["integration tests", "auth"]
+
+      - id: create_new_despite_similar
+        item:
+          text: "set up error alerting in PagerDuty"
+          context: ""
+        expect:
+          action: create_todo
+          args_contain:
+            title: ["PagerDuty"]
+
+      - id: create_cross_domain_task
+        item:
+          text: "prepare a technical blog post about our GraphQL migration"
+          context: ""
+        expect:
+          action: create_todo
+          args_contain:
+            title: ["blog", "GraphQL"]
+
+      # ── update_todo at scale ──────────────────────────────────────────
+      - id: status_cancel_among_many
+        item:
+          text: "we're dropping that, not worth the effort"
+          context: "custom domain support"
+        expect:
+          action: update_todo
+          args_contain:
+            todo_id: "t34"
+            status: "cancelled"
+          args_null:
+            - description
+
+      - id: status_complete_specific
+        item:
+          text: "done with that"
+          context: "updating the README"
+        expect:
+          action: update_todo
+          args_contain:
+            todo_id: "t94"
+            status: "completed"
+          args_null:
+            - description
+
+      - id: info_deadline_precision
+        item:
+          text: "needs to be ready two weeks before the conference"
+          context: "Austin Tech Summit presentation"
+        expect:
+          action: update_todo
+          args_contain:
+            todo_id: "t61"
+            description: ["two weeks"]
+
+      - id: info_budget_specific_todo
+        item:
+          text: "budget cap is $15K for this"
+          context: "billboard advertising in Bangalore"
+        expect:
+          action: update_todo
+          args_contain:
+            todo_id: "t82"
+            description: ["15"]
+
+      - id: status_start_crowded
+        item:
+          text: "picking this up today"
+          context: "rate limiter for the public API"
+        expect:
+          action: update_todo
+          args_contain:
+            todo_id: "t3"
+            status: "in_progress"
+
+      - id: add_detail_empty_desc
+        item:
+          text: "should be the sliding window algorithm"
+          context: "rate limiting implementation"
+        expect:
+          action: update_todo
+          args_contain:
+            todo_id: "t3"
+            description: ["sliding window"]
+
+      # ── save_fact at scale ────────────────────────────────────────────
+      - id: save_new_team_fact
+        item:
+          text: "We just hired a new designer named Anika, she starts next Monday"
+          context: ""
+        expect:
+          action: save_fact
+          args_contain:
+            fact: ["Anika", "designer"]
+
+      - id: save_new_decision
+        item:
+          text: "We decided to use Stripe for payment processing"
+          context: ""
+        expect:
+          action: save_fact
+          args_contain:
+            fact: ["Stripe", "payment"]
+
+      - id: save_personal_new
+        item:
+          text: "my anniversary is March 20th"
+          context: ""
+        expect:
+          action: save_fact
+          args_contain:
+            fact: ["anniversary", "March"]
+
+      # ── update_fact at scale ──────────────────────────────────────────
+      - id: update_metric_fact
+        item:
+          text: "waitlist just crossed 18K signups over the weekend"
+          context: ""
+        expect:
+          action: update_fact
+          args_contain:
+            fact_id: "f71"
+            fact: ["18"]
+
+      - id: update_team_role
+        item:
+          text: "Devon is transitioning from backend to a tech lead role"
+          context: ""
+        expect:
+          action: update_fact
+          args_contain:
+            fact_id: "f1"
+            fact: ["Devon", "tech lead"]
+
+      - id: update_preference_change
+        item:
+          text: "actually switching our deploy window to Tuesday nights, Thursdays are too busy"
+          context: ""
+        expect:
+          action: update_fact
+          args_contain:
+            fact_id: "f136"
+            fact: ["Tuesday"]
+
+      # ── do_nothing at scale ───────────────────────────────────────────
+      - id: duplicate_todo_at_scale
+        item:
+          text: "we should write integration tests for the API"
+          context: ""
+        expect:
+          action: do_nothing
+
+      - id: duplicate_fact_at_scale
+        item:
+          text: "Devon is our backend lead"
+          context: ""
+        expect:
+          action: do_nothing
+
+      - id: status_already_correct
+        item:
+          text: "still working on the notification refactor"
+          context: ""
+        expect:
+          action: do_nothing
+
+      - id: near_miss_info
+        item:
+          text: "the waitlist is at 12K signups"
+          context: ""
+        expect:
+          action: do_nothing
+
+      - id: noise_thinking_aloud
+        item:
+          text: "hmm interesting, let me think about this more"
+          context: ""
+        expect:
+          action: do_nothing
+
+      - id: vague_observation
+        item:
+          text: "things are really coming together nicely"
           context: ""
         expect:
           action: do_nothing

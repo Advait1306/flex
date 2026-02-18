@@ -60,6 +60,10 @@ def main():
         help="Run only scenarios matching this substring (e.g. 'duplicate' or 'status_change')",
     )
     parser.add_argument(
+        "--group",
+        help="Run only groups matching this substring (e.g. 'startup_founder' or 'full')",
+    )
+    parser.add_argument(
         "--generate-fixtures",
         action="store_true",
         help="Regenerate fixture embeddings and exit",
@@ -90,22 +94,22 @@ def main():
 
     if "freewrite" in components:
         print("\nRunning freewrite processor eval...")
-        results = eval_freewrite_processor.run(runs=args.runs, scenario_filter=args.scenario)
+        results = eval_freewrite_processor.run(runs=args.runs, scenario_filter=args.scenario, group_filter=args.group)
         print_results("freewrite", results, args.runs)
 
     if "search" in components:
         print("\nRunning search eval...")
-        results = eval_search.run(runs=args.runs, scenario_filter=args.scenario)
+        results = eval_search.run(runs=args.runs, scenario_filter=args.scenario, group_filter=args.group)
         print_results("search", results, args.runs)
 
     if "triage" in components:
         print("\nRunning triage agent eval...")
-        results = eval_triage_agent.run(runs=args.runs, scenario_filter=args.scenario)
+        results = eval_triage_agent.run(runs=args.runs, scenario_filter=args.scenario, group_filter=args.group)
         print_results("triage", results, args.runs)
 
     if "daemon" in components:
         print("\nRunning daemon processor eval...")
-        results = eval_daemon_processor.run(runs=args.runs, scenario_filter=args.scenario)
+        results = eval_daemon_processor.run(runs=args.runs, scenario_filter=args.scenario, group_filter=args.group)
         print_results("daemon", results, args.runs)
 
 
