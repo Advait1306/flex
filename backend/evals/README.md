@@ -51,6 +51,8 @@ evals/
 │   ├── fixtures/                   # fixture sets (Qdrant data)
 │   │   └── full.yaml
 │   ├── freewrite_processor.yaml    # freewrite test scenarios
+│   ├── freewrite_inputs/           # long-form document files for sliding window evals
+│   │   └── startup_journal.txt
 │   ├── search.yaml                 # search test scenarios
 │   └── triage_agent.yaml           # triage test scenarios
 └── fixture_data/                   # generated (git-ignored) — pre-computed embeddings
@@ -120,6 +122,30 @@ When a group has no `fixtures` key, the eval creates empty Qdrant collections fo
     items_contain: ["groceries"]           # keywords in item text (case-insensitive)
     context_contains: ["waitlist"]         # keywords in item context field
 ```
+
+### Sliding window mode (freewrite)
+
+Groups can reference a `document_file` to run sliding window scenarios against a long document. Each scenario uses `trigger_line` (a paragraph index) instead of inline `trigger`/`document_context`:
+
+```yaml
+- name: long_context
+  document_file: freewrite_inputs/startup_journal.txt
+  scenarios:
+    - id: sw_action_early
+      trigger_line: 42          # 0-based paragraph index
+      expect:
+        action: triage
+        min_items: 1
+        items_contain: ["budget review"]
+```
+
+The document is split by `\n\n` into paragraphs. For each scenario:
+- **trigger** = the paragraph at `trigger_line`
+- **document_context** = all preceding paragraphs joined with `\n`
+
+This tests how the freewrite processor handles increasing context sizes. Early paragraphs get small context (~500 words), late paragraphs get large context (~20k words). The eval prints context word count per scenario for visibility.
+
+The document file (`startup_journal.txt`) is a ~20k word freewrite journal with known anchor paragraphs at specific indices — some actionable, some noise.
 
 ### Search scenarios
 

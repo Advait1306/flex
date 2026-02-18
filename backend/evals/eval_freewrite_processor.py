@@ -57,6 +57,25 @@ def _evaluate_once(scenario: dict) -> dict[str, bool]:
     return checks
 
 
+def _load_document_paragraphs(document_file: str) -> list[str]:
+    """Load a document file and split into paragraphs by double-newline."""
+    doc_path = DATASETS_DIR / document_file
+    doc_text = doc_path.read_text()
+    return [p.strip() for p in doc_text.split("\n\n") if p.strip()]
+
+
+def _resolve_scenario(scenario: dict, paragraphs: list[str] | None) -> dict:
+    """Resolve trigger/context from document paragraphs if using sliding window mode."""
+    if paragraphs is None or "trigger_line" not in scenario:
+        return scenario
+
+    idx = scenario["trigger_line"]
+    resolved = {**scenario}
+    resolved["trigger"] = paragraphs[idx]
+    resolved["document_context"] = "\n".join(paragraphs[:idx])
+    return resolved
+
+
 def run(runs: int = 3, scenario_filter: str | None = None) -> list[ScenarioResult]:
     """Run freewrite processor eval scenarios, optionally filtered by ID substring."""
     with open(DATASETS_DIR / "freewrite_processor.yaml") as f:
@@ -64,10 +83,17 @@ def run(runs: int = 3, scenario_filter: str | None = None) -> list[ScenarioResul
 
     results = []
     for group in data["groups"]:
-        fixture_name = group.get("fixtures")
         scenarios = [s for s in group["scenarios"] if not scenario_filter or scenario_filter in s["id"]]
         if not scenarios:
             continue
+
+        fixture_name = group.get("fixtures")
+        document_file = group.get("document_file")
+
+        paragraphs = None
+        if document_file:
+            paragraphs = _load_document_paragraphs(document_file)
+            print(f"  Loaded document: {document_file} ({len(paragraphs)} paragraphs)")
 
         if fixture_name:
             print(f"  Loading fixture set: {fixture_name}")
@@ -75,10 +101,16 @@ def run(runs: int = 3, scenario_filter: str | None = None) -> list[ScenarioResul
 
         try:
             for scenario in scenarios:
+                resolved = _resolve_scenario(scenario, paragraphs)
+
+                if paragraphs is not None and "trigger_line" in scenario:
+                    ctx_words = len(resolved["document_context"].split())
+                    print(f"  [{scenario['id']}] trigger_line={scenario['trigger_line']}, context={ctx_words} words")
+
                 sr = ScenarioResult(scenario_id=scenario["id"])
                 for i in range(runs):
                     print(f"  [{scenario['id']}] run {i + 1}/{runs}...", end=" ", flush=True)
-                    checks = _evaluate_once(scenario)
+                    checks = _evaluate_once(resolved)
                     passed = all(checks.values())
                     print("PASS" if passed else f"FAIL {checks}")
                     sr.runs.append(checks)
