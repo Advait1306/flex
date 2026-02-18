@@ -4,6 +4,11 @@ The eval framework is in place and functional, but scenario coverage is still in
 
 The eval system tests the AI pipeline components against predefined scenarios with deterministic programmatic checks. No LLM-as-judge — the LLM is the system under test, not the evaluator.
 
+## Prerequisites
+
+- `OPENROUTER_API_KEY` set in environment (used for LLM calls and embeddings)
+- Qdrant running locally (required for search and triage evals)
+
 ## Running
 
 ```bash
@@ -17,9 +22,23 @@ The eval system tests the AI pipeline components against predefined scenarios wi
 ./eval.sh --generate-fixtures --component triage  # Regenerate then run specific eval
 ```
 
+Or directly via `uv run`:
+
+```bash
+cd backend
+uv run python -m evals.run
+uv run python -m evals.run --component triage --group startup_founder
+uv run python -m evals.run --component triage --scenario no_duplicate --log-level info
+```
+
 ## Components
 
-Four independent eval modules, each testing a different stage of the pipeline:
+| Component | What it tests | Needs Qdrant | Needs LLM |
+|-----------|--------------|--------------|-----------|
+| `freewrite` | `_extract_triage_items()` — extracts actionable items from freeform text | No | Yes |
+| `search` | `search_todos()` / `search_facts()` — retrieval quality against fixture data | Yes | Embeddings only |
+| `triage` | `triage_agent()` — end-to-end decision making (search + action selection) | Yes | Yes |
+| `daemon` | `_extract_triage_items_from_snapshot()` — extracts signal from app accessibility trees | No | Yes |
 
 ### 1. Freewrite Processor (`eval_freewrite_processor.py`)
 
@@ -76,11 +95,33 @@ Tests `_extract_triage_items_from_snapshot()` — given an app accessibility tre
 
 ### Fixture Sets
 
-Two fixture sets exist under `datasets/fixtures/`:
+| Fixture | Size | Purpose |
+|---------|------|---------|
+| `small_baseline.yaml` | 5 todos, 4 facts | Small baseline for quick sanity checks |
+| `startup_founder.yaml` | 100 todos, 200 facts | Large-scale precision tests based on startup journal persona |
 
-**`small_baseline.yaml`** — Small baseline (5 todos, 4 facts). Quick sanity checks.
+**`datasets/fixtures/small_baseline.yaml`** (example):
 
-**`startup_founder.yaml`** — Large-scale (100 todos, 200 facts). Based on the Felix startup journal persona. Tests precision when the agent must find the right item among many similar ones across engineering, product, design, marketing, hiring, operations, personal, and team/process categories.
+```yaml
+todos:
+  - id: "t1"
+    title: "Buy groceries"
+    description: "milk, eggs, bread"
+    status: "pending"
+    tags: ["groceries", "shopping"]
+
+facts:
+  - id: "f1"
+    fact: "User's preferred programming language is Python"
+    category: "preference"
+    tags: ["programming", "python", "language"]
+```
+
+To add a new fixture set, create a new YAML file in `datasets/fixtures/` and run:
+
+```bash
+./eval.sh --generate-fixtures
+```
 
 ### Pre-computed Embeddings (`fixture_data/<name>/`)
 
@@ -126,6 +167,86 @@ groups:
 
 Groups with no `fixtures` key create empty Qdrant collections (cold-start testing).
 
+### Freewrite processor scenarios
+
+```yaml
+- id: simple_action
+  trigger: "I need to buy groceries"      # the user's input text
+  document_context: ""                     # surrounding document content
+  expect:
+    action: triage                         # "triage" or "do_nothing"
+    min_items: 1                           # minimum extracted items
+    items_contain: ["groceries"]           # keywords in item text (case-insensitive)
+    context_contains: ["waitlist"]         # keywords in item context field
+```
+
+### Sliding window mode (freewrite)
+
+Groups can reference a `document_file` to run sliding window scenarios against a long document. Each scenario uses `trigger_line` (a paragraph index) instead of inline `trigger`/`document_context`:
+
+```yaml
+- name: long_context
+  document_file: freewrite_inputs/startup_journal.txt
+  scenarios:
+    - id: sw_action_early
+      trigger_line: 42          # 0-based paragraph index
+      expect:
+        action: triage
+        min_items: 1
+        items_contain: ["budget review"]
+```
+
+The document is split by `\n\n` into paragraphs. For each scenario:
+- **trigger** = the paragraph at `trigger_line`
+- **document_context** = all preceding paragraphs joined with `\n`
+
+This tests how the freewrite processor handles increasing context sizes. Early paragraphs get small context (~500 words), late paragraphs get large context (~20k words). The eval prints context word count per scenario for visibility.
+
+The document file (`startup_journal.txt`) is a ~20k word freewrite journal with known anchor paragraphs at specific indices — some actionable, some noise.
+
+### Search scenarios
+
+```yaml
+- id: exact_keyword_match
+  type: todos                              # "todos" or "facts"
+  query: "groceries"
+  expect:
+    top_result: "t1"                       # expected top-1 result ID
+    should_include: ["t1"]                 # IDs that must appear in results
+    should_exclude: ["t2"]                 # IDs that must not appear
+```
+
+### Triage agent scenarios
+
+```yaml
+- id: status_change_complete
+  item:
+    text: "close that"                     # the triage item text
+    context: "BLR billboard"               # context from freewrite processor
+  expect:
+    action: update_todo                    # "create_todo", "update_todo", "save_fact", "do_nothing"
+    args_contain:
+      todo_id: "t4"                        # exact match on argument value
+      status: "completed"                  # exact match
+      title: ["laptop", "work"]            # list = keyword check (case-insensitive)
+```
+
+### Daemon processor scenarios
+
+```yaml
+- id: slack_dm_task_request
+  app_name: "Slack"                            # application name
+  app_category: "electron"                     # app category
+  content_file: "daemon_inputs/slack_dm.txt"   # accessibility tree dump
+  expect:
+    action: triage                             # "triage" or "do_nothing"
+    min_items: 2                               # minimum extracted items
+    max_items: 4                               # maximum extracted items
+    all_items_have_context: true               # every item must have context
+    items_contain: ["PR #247"]                 # keywords in item text
+    items_not_contain: ["[Button]", "[Link]"]  # UI chrome correctly filtered
+```
+
 ## Multi-Run Strategy
 
 LLM outputs are non-deterministic, so all evals default to 3 runs per scenario. A scenario passes only if ALL checks pass in ALL runs. Search is deterministic (pre-computed embeddings), so multiple runs produce identical results.
@@ -133,13 +254,20 @@ LLM outputs are non-deterministic, so all evals default to 3 runs per scenario. 
 Output shows per-run pass/fail:
 
 ```
-Component: triage
-Scenario                    Runs    Pass
---------------------------  ------  ----
-create_new_unrelated        PPP     3/3
-update_existing_with_ctx    PPF     2/3
-meaningless_greeting        PPP     3/3
+============================================================
+Search Eval (1 run each)
+============================================================
++-----------------+-----------+------+
+| Scenario        | Pass Rate | Runs |
++-----------------+-----------+------+
+| exact_keyword   | 1/1       | P    |
+| semantic_auth   | 1/1       | P    |
+| unrelated_query | 0/1       | F    |
++-----------------+-----------+------+
+Overall: 2/3 scenarios passed (67%)
 ```
+
+`P` = all checks passed for that run, `F` = at least one check failed. Failed runs print the individual check results inline.
 
 ## File Structure
 
@@ -156,12 +284,13 @@ evals/
 │   │   ├── small_baseline.yaml     # Small baseline (5 todos, 4 facts)
 │   │   └── startup_founder.yaml    # Large-scale (100 todos, 200 facts)
 │   ├── freewrite_processor.yaml    # Freewrite scenarios
+│   ├── freewrite_inputs/           # Long-form documents for sliding window evals
+│   │   └── startup_journal.txt
 │   ├── search.yaml                 # Search scenarios
 │   ├── triage_agent.yaml           # Triage scenarios
 │   ├── daemon_processor.yaml       # Daemon scenarios
-│   ├── daemon_inputs/              # Accessibility tree dumps for daemon eval
-│   └── freewrite_inputs/           # Long-form documents for sliding window evals
-└── fixture_data/                   # Generated (git-ignored) — pre-computed embeddings
+│   └── daemon_inputs/              # Accessibility tree dumps (Linear, Slack)
+└── fixture_data/                   # Generated — pre-computed embeddings
     ├── small_baseline/
     └── startup_founder/
 ```
