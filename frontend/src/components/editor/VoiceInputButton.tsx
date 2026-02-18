@@ -10,21 +10,15 @@ interface VoiceInputButtonProps {
 }
 
 export function VoiceInputButton({ onTranscript }: VoiceInputButtonProps) {
-  const {
-    isListening,
-    isTranscribing,
-    isSpeaking,
-    isConnecting,
-    error,
-    startListening,
-    stopListening,
-  } = useRealtimeTranscription({ onTranscript });
+  const { micState, error, startListening, stopListening } =
+    useRealtimeTranscription({ onTranscript });
 
   const handleToggle = async () => {
-    if (isListening) {
+    if (micState !== "off") {
       stopListening();
     } else {
       try {
+        onTranscript(""); // claim a new block for this session
         await startListening();
       } catch (err) {
         console.error("Failed to start voice input:", err);
@@ -32,37 +26,26 @@ export function VoiceInputButton({ onTranscript }: VoiceInputButtonProps) {
     }
   };
 
-  const getButtonState = () => {
-    if (isConnecting) return "connecting";
-    if (isTranscribing) return "transcribing";
-    if (isSpeaking) return "speaking";
-    if (isListening) return "listening";
-    return "idle";
-  };
-
-  const state = getButtonState();
-
   return (
     <div className="absolute bottom-6 right-6 z-50">
       <Button
         onClick={handleToggle}
-        disabled={isConnecting}
+        disabled={micState === "connecting"}
         size="icon-lg"
         title={error || undefined}
         className={cn(
           "rounded-full shadow-lg transition-all duration-200",
-          state === "idle" && "bg-primary hover:bg-primary/90",
-          state === "connecting" && "bg-amber-500 animate-pulse",
-          state === "listening" &&
+          micState === "off" && "bg-primary hover:bg-primary/90",
+          micState === "connecting" && "bg-amber-500 animate-pulse",
+          micState === "on" &&
             "bg-amber-500 hover:bg-amber-600 animate-pulse",
-          state === "speaking" &&
-            "bg-green-500 hover:bg-green-600 animate-pulse",
-          state === "transcribing" && "bg-blue-500 hover:bg-blue-600"
+          micState === "speaking" &&
+            "bg-green-500 hover:bg-green-600 animate-pulse"
         )}
       >
-        {state === "connecting" || state === "transcribing" ? (
+        {micState === "connecting" ? (
           <Loader2 className="size-5 animate-spin text-white" />
-        ) : state === "idle" ? (
+        ) : micState === "off" ? (
           <Mic className="size-5 text-white" />
         ) : (
           <MicOff className="size-5 text-white" />

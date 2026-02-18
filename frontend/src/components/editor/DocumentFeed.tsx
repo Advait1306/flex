@@ -37,9 +37,7 @@ export function DocumentFeed() {
   );
 
   const handleTranscript = useCallback((text: string) => {
-    if (editorRef.current) {
-      editorRef.current.insertText(text);
-    }
+    editorRef.current?.insertText(text);
   }, []);
 
   if (isLoading) {
