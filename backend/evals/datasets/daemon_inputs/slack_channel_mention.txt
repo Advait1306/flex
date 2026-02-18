@@ -1,0 +1,90 @@
+  engineering (Channel) - Acme Corp - Slack:
+              engineering (Channel) - Acme Corp - Slack:
+                          - [Button] Back in history
+                          - [Button] Forward in history
+                          - [Button] Search
+                          - [Button] Help
+                            - 3
+                            - 1
+                      Acme Corp:
+                                - Home
+                                - DMs
+                                - Activity
+                                - Files
+                                - More
+                            Home:
+                              Home:
+                                  - [Button] New message
+                                        - Threads
+                                        - Huddles
+                                        - Drafts & sent
+                                        - Directories
+                                            - general
+                                            - engineering
+                                            - design
+                                            - random
+                                            - standup
+                                            - Sarah Chen
+                                            - Marcus Webb
+                                            - Priya Patel
+                                            - you
+                                            - guest
+                              Channel engineering:
+                                    - [Button] Move channel
+                                  - [Button] engineering
+                                  - [Button] View all 12 members. Includes Sarah Chen, Marcus Webb, and you.
+                                      - [Button] Start huddle in engineering
+                                  - [Button] Search in channel
+                                      - Messages
+                                      - Add canvas
+                                      - Files
+                                  - Canvas
+                                  - List
+                                  - Folder
+                                        engineering:
+                                          Tuesday, February 17th Press enter to select a date to jump to.:
+                                          Marcus Webb: CI pipeline has been red for the last 3 runs on main. Looks like the integration tests are timing out on the payment service. 9:30 AM.:
+                                                - [Button] Marcus Webb
+                                                - [Link] Feb 17th at 9:30:15 AM
+                                                  - 9:30 AM
+                                                - CI pipeline has been red for the last 3 runs on main. Looks like the integration tests are timing out on the payment service.
+                                          Priya Patel: Yeah I noticed that too. The payment service health check is returning slow responses since the last deploy. 9:35 AM.:
+                                                - [Button] Priya Patel
+                                                - [Link] Feb 17th at 9:35:42 AM
+                                                  - 9:35 AM
+                                                - Yeah I noticed that too. The payment service health check is returning slow responses since the last deploy.
+                                          Marcus Webb: @you Can you take a look at the payment service logs and figure out what's causing the slowdown? We need CI green before the 2.4 release cut tomorrow. The failing tests are in tests/integration/test_payment_flow.py. 9:41 AM.:
+                                                - [Button] Marcus Webb
+                                                - [Link] Feb 17th at 9:41:03 AM
+                                                  - 9:41 AM
+                                                - @you Can you take a look at the payment service logs and figure out what's causing the slowdown? We need CI green before the 2.4 release cut tomorrow.
+                                                - The failing tests are in tests/integration/test_payment_flow.py.
+                                          Sarah Chen: Also @you while you're in there, the error rate dashboard for the payment service is showing a spike. Can you check if it's related or a separate issue? Here's the Grafana link: https://grafana.internal.acme.com/d/payment-svc. 9:48 AM. 1 link.:
+                                                - [Button] Sarah Chen
+                                                - [Link] Feb 17th at 9:48:19 AM
+                                                  - 9:48 AM
+                                                - Also @you while you're in there, the error rate dashboard for the payment service is showing a spike. Can you check if it's related or a separate issue?
+                                                - Here's the Grafana link:
+                                                - [Link] https://grafana.internal.acme.com/d/payment-svc
+                                                  - https://grafana.internal.acme.com/d/payment-svc
+                                          Priya Patel: FYI I'm going to roll back the payment service to the previous version for now so we're not blocking other teams. Will revert commit abc123f. 10:02 AM.:
+                                                - [Button] Priya Patel
+                                                - [Link] Feb 17th at 10:02:55 AM
+                                                  - 10:02 AM
+                                                - FYI I'm going to roll back the payment service to the previous version for now so we're not blocking other teams. Will revert commit abc123f.
+                                          Marcus Webb: Good call. @you once Priya rolls back, can you still investigate the root cause so we can fix forward? Don't want to just revert and forget. 10:05 AM.:
+                                                - [Button] Marcus Webb
+                                                - [Link] Feb 17th at 10:05:33 AM
+                                                  - 10:05 AM
+                                                - Good call. @you once Priya rolls back, can you still investigate the root cause so we can fix forward? Don't want to just revert and forget.
+                                                  Message actions:
+                                                    - [Button] Add reaction…
+                                                    - [Button] Reply in thread
+                                                    - [Button] Forward message…
+                                    composer:
+                                              - [Button] Emoji
+                                              - [Button] Mention someone
+                                              - [Button] Record video clip
+                                              - [Button] Record audio clip
+                                              - [Button] Run shortcut
+                                            - [Button] Send now

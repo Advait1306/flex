@@ -1,0 +1,93 @@
+  engineering (Channel) - Acme Corp - Slack:
+              engineering (Channel) - Acme Corp - Slack:
+                          - [Button] Back in history
+                          - [Button] Forward in history
+                          - [Button] Search
+                          - [Button] Help
+                            - 3
+                            - 1
+                      Acme Corp:
+                                - Home
+                                - DMs
+                                - Activity
+                                - Files
+                                - More
+                            Home:
+                              Home:
+                                  - [Button] New message
+                                        - Threads
+                                        - Huddles
+                                        - Drafts & sent
+                                        - Directories
+                                            - general
+                                            - engineering
+                                            - design
+                                            - random
+                                            - standup
+                                            - Sarah Chen
+                                            - Marcus Webb
+                                            - Priya Patel
+                                            - you
+                                            - guest
+                              Channel engineering:
+                                    - [Button] Move channel
+                                  - [Button] engineering
+                                  - [Button] View all 12 members. Includes Sarah Chen, Marcus Webb, and you.
+                                      - [Button] Start huddle in engineering
+                                  - [Button] Search in channel
+                                      - Messages
+                                      - Add canvas
+                                      - Files
+                                  - Canvas
+                                  - List
+                                  - Folder
+                                        engineering:
+                                          Tuesday, February 17th Press enter to select a date to jump to.:
+                                          Marcus Webb: Interesting read on how Figma handles real-time collaboration at scale. They moved away from CRDTs to a custom OT implementation. https://figma.com/blog/realtime-editing. 11:00 AM. 1 link.:
+                                                - [Button] Marcus Webb
+                                                - [Link] Feb 17th at 11:00:22 AM
+                                                  - 11:00 AM
+                                                - Interesting read on how Figma handles real-time collaboration at scale. They moved away from CRDTs to a custom OT implementation.
+                                                - [Link] https://figma.com/blog/realtime-editing
+                                                  - https://figma.com/blog/realtime-editing
+                                                  - [Button] Remove attachment
+                                                  - figma.com
+                                                  - [Link] How Figma's multiplayer technology works
+                                                    - How Figma's multiplayer technology works
+                                                  - A deep dive into the technology behind real-time collaboration
+                                          Sarah Chen: Oh nice, we were just discussing CRDTs vs OT for the shared editing feature last sprint. The latency trade-offs are really different depending on document size. 11:08 AM.:
+                                                - [Button] Sarah Chen
+                                                - [Link] Feb 17th at 11:08:15 AM
+                                                  - 11:08 AM
+                                                - Oh nice, we were just discussing CRDTs vs OT for the shared editing feature last sprint. The latency trade-offs are really different depending on document size.
+                                          Priya Patel: Yeah their approach is interesting. They basically built a hybrid - OT for the core document state but CRDT-like conflict resolution for cursor positions and selections. 11:15 AM.:
+                                                - [Button] Priya Patel
+                                                - [Link] Feb 17th at 11:15:33 AM
+                                                  - 11:15 PM
+                                                - Yeah their approach is interesting. They basically built a hybrid - OT for the core document state but CRDT-like conflict resolution for cursor positions and selections.
+                                          Marcus Webb: The part about their undo/redo implementation was surprising. They had to rethink the entire operation history model when they hit issues with concurrent edits. 11:22 AM.:
+                                                - [Button] Marcus Webb
+                                                - [Link] Feb 17th at 11:22:48 AM
+                                                  - 11:22 AM
+                                                - The part about their undo/redo implementation was surprising. They had to rethink the entire operation history model when they hit issues with concurrent edits.
+                                          Sarah Chen: Makes sense. We should probably factor this into our decision for Q2. The product team is leaning towards Google Docs-style collaboration but the technical complexity is non-trivial. 11:30 AM.:
+                                                - [Button] Sarah Chen
+                                                - [Link] Feb 17th at 11:30:05 AM
+                                                  - 11:30 AM
+                                                - Makes sense. We should probably factor this into our decision for Q2. The product team is leaning towards Google Docs-style collaboration but the technical complexity is non-trivial.
+                                          Priya Patel: True. For what it's worth, Yjs has gotten a lot better recently. Their CRDT implementation handles most of the edge cases now and the community is pretty active. 11:35 AM.:
+                                                - [Button] Priya Patel
+                                                - [Link] Feb 17th at 11:35:19 AM
+                                                  - 11:35 AM
+                                                - True. For what it's worth, Yjs has gotten a lot better recently. Their CRDT implementation handles most of the edge cases now and the community is pretty active.
+                                                  Message actions:
+                                                    - [Button] Add reaction…
+                                                    - [Button] Reply in thread
+                                                    - [Button] Forward message…
+                                    composer:
+                                              - [Button] Emoji
+                                              - [Button] Mention someone
+                                              - [Button] Record video clip
+                                              - [Button] Record audio clip
+                                              - [Button] Run shortcut
+                                            - [Button] Send now

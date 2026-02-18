@@ -1,0 +1,108 @@
+  engineering (Channel) - Acme Corp - Slack:
+              engineering (Channel) - Acme Corp - Slack:
+                          - [Button] Back in history
+                          - [Button] Forward in history
+                          - [Button] Search
+                          - [Button] Help
+                            - 3
+                            - 1
+                      Acme Corp:
+                                - Home
+                                - DMs
+                                - Activity
+                                - Files
+                                - More
+                            Home:
+                              Home:
+                                  - [Button] New message
+                                        - Threads
+                                        - Huddles
+                                        - Drafts & sent
+                                        - Directories
+                                            - general
+                                            - engineering
+                                            - design
+                                            - random
+                                            - standup
+                                            - Sarah Chen
+                                            - Marcus Webb
+                                            - Priya Patel
+                                            - you
+                                            - guest
+                              Channel engineering:
+                                    - [Button] Move channel
+                                  - [Button] engineering
+                                  - [Button] View all 12 members. Includes Sarah Chen, Marcus Webb, and you.
+                                      - [Button] Start huddle in engineering
+                                  - [Button] Search in channel
+                                      - Messages
+                                      - Add canvas
+                                      - Files
+                                  - Canvas
+                                  - List
+                                  - Folder
+                                        engineering:
+                                          Tuesday, February 17th Press enter to select a date to jump to.:
+                                          Sarah Chen: We need to decide on the caching strategy for the product catalog API. Current response times are 800ms+ which is way too slow for the mobile app. 2:00 PM. 5 replies.:
+                                                - [Button] Sarah Chen
+                                                - [Link] Feb 17th at 2:00:14 PM
+                                                  - 2:00 PM
+                                                - We need to decide on the caching strategy for the product catalog API. Current response times are 800ms+ which is way too slow for the mobile app.
+                                                - [Button] 5 replies
+                                                  - Last reply 1 hour ago
+                                                  - View thread
+                                    composer:
+                                              - [Button] Emoji
+                                              - [Button] Mention someone
+                                              - [Button] Record video clip
+                                              - [Button] Record audio clip
+                                              - [Button] Run shortcut
+                                            - [Button] Send now
+                              Thread in conversation with #engineering:
+                                  - Thread
+                                  - [Button] Summarize thread
+                                  - [Button] Close
+                                    Thread with engineering (5 replies):
+                                      Sarah Chen: We need to decide on the caching strategy for the product catalog API. Current response times are 800ms+ which is way too slow for the mobile app. Tuesday at 2:00 PM.:
+                                            - [Button] Sarah Chen
+                                            - [Link] Feb 17th at 2:00:14 PM
+                                              - Tuesday at 2:00 PM
+                                            - We need to decide on the caching strategy for the product catalog API. Current response times are 800ms+ which is way too slow for the mobile app.
+                                              Message actions:
+                                                - [Button] Add reaction…
+                                                - [Button] Open in channel
+                                                - [Button] Forward message…
+                                          - 5 replies
+                                      Marcus Webb: I think Redis with a 5 minute TTL makes sense for the catalog. Most of the data doesn't change frequently. Tuesday at 2:12 PM.:
+                                            - [Button] Marcus Webb
+                                            - [Link] Feb 17th at 2:12:30 PM
+                                              - Tuesday at 2:12 PM
+                                              - I think Redis with a 5 minute TTL makes sense for the catalog. Most of the data doesn't change frequently.
+                                      Priya Patel: Agreed on Redis. But we need cache invalidation when products are updated through the admin panel. Can we use pub/sub for that? Tuesday at 2:18 PM.:
+                                            - [Button] Priya Patel
+                                            - [Link] Feb 17th at 2:18:45 PM
+                                              - Tuesday at 2:18 PM
+                                              - Agreed on Redis. But we need cache invalidation when products are updated through the admin panel. Can we use pub/sub for that?
+                                      Sarah Chen: Good point. Let's go with Redis + pub/sub invalidation then. Here's what I'm thinking for task breakdown: Tuesday at 2:25 PM.:
+                                            - [Button] Sarah Chen
+                                            - [Link] Feb 17th at 2:25:11 PM
+                                              - Tuesday at 2:25 PM
+                                              - Good point. Let's go with Redis + pub/sub invalidation then. Here's what I'm thinking for task breakdown:
+                                      Sarah Chen: @you Can you set up the Redis cache layer for the catalog endpoints? You know that service best. Target is getting p95 under 200ms. Tuesday at 2:25 PM.:
+                                            - [Button] Sarah Chen
+                                            - [Link] Feb 17th at 2:25:38 PM
+                                              - Tuesday at 2:25 PM
+                                              - @you Can you set up the Redis cache layer for the catalog endpoints? You know that service best. Target is getting p95 under 200ms.
+                                      Marcus Webb: I'll handle the pub/sub invalidation piece and hook it into the admin panel. @you can you also write up a brief RFC doc for this so we have it documented? Just a short one in Notion, doesn't need to be formal. Tuesday at 2:30 PM.:
+                                            - [Button] Marcus Webb
+                                            - [Link] Feb 17th at 2:30:02 PM
+                                              - Tuesday at 2:30 PM
+                                              - I'll handle the pub/sub invalidation piece and hook it into the admin panel. @you can you also write up a brief RFC doc for this so we have it documented? Just a short one in Notion, doesn't need to be formal.
+                                              Message actions:
+                                                - [Button] Add reaction…
+                                                - [Button] Forward message…
+                                        composer:
+                                                - Also send to #engineering
+                                                  - [Button] Emoji
+                                                  - [Button] Mention someone
+                                                - [Button] Send now

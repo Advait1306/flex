@@ -38,3 +38,55 @@ groups:
           max_items: 5
           all_items_have_context: true
           items_not_contain: ["[Button]", "[Link]", "Skip to content", "Copy file path"]
+
+  - name: slack_views
+    scenarios:
+      - id: slack_casual_channel
+        app_name: "Slack"
+        app_category: "electron"
+        content_file: "daemon_inputs/slack_casual_channel.txt"
+        expect:
+          action: do_nothing
+
+      - id: slack_dm_task_request
+        app_name: "Slack"
+        app_category: "electron"
+        content_file: "daemon_inputs/slack_dm_task_request.txt"
+        expect:
+          action: triage
+          min_items: 2
+          max_items: 4
+          all_items_have_context: true
+          items_contain: ["PR #247"]
+          items_not_contain: ["[Button]", "[Link]", "Add reaction", "Record video"]
+
+      - id: slack_channel_mention
+        app_name: "Slack"
+        app_category: "electron"
+        content_file: "daemon_inputs/slack_channel_mention.txt"
+        expect:
+          action: triage
+          min_items: 1
+          max_items: 4
+          all_items_have_context: true
+          items_contain: ["payment service"]
+          items_not_contain: ["[Button]", "[Link]", "Add reaction", "Start huddle"]
+
+      - id: slack_thread_followups
+        app_name: "Slack"
+        app_category: "electron"
+        content_file: "daemon_inputs/slack_thread_followups.txt"
+        expect:
+          action: triage
+          min_items: 1
+          max_items: 4
+          all_items_have_context: true
+          items_contain: ["Redis"]
+          items_not_contain: ["[Button]", "[Link]", "Add reaction", "Summarize thread"]
+
+      - id: slack_ambient_discussion
+        app_name: "Slack"
+        app_category: "electron"
+        content_file: "daemon_inputs/slack_ambient_discussion.txt"
+        expect:
+          action: do_nothing

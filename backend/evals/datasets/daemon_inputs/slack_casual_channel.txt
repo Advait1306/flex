@@ -1,0 +1,92 @@
+  random (Channel) - Acme Corp - Slack:
+              random (Channel) - Acme Corp - Slack:
+                          - [Button] Back in history
+                          - [Button] Forward in history
+                          - [Button] Search
+                          - [Button] Help
+                            - 3
+                            - 1
+                      Acme Corp:
+                                - Home
+                                - DMs
+                                - Activity
+                                - Files
+                                - More
+                            Home:
+                              Home:
+                                  - [Button] New message
+                                        - Threads
+                                        - Huddles
+                                        - Drafts & sent
+                                        - Directories
+                                            - general
+                                            - engineering
+                                            - design
+                                            - random
+                                            - standup
+                                            - Sarah Chen
+                                            - Marcus Webb
+                                            - Priya Patel
+                                            - you
+                                            - guest
+                              Channel random:
+                                    - [Button] Move channel
+                                  - [Button] random
+                                  - [Button] View all 24 members. Includes Sarah Chen, Marcus Webb, and you.
+                                      - [Button] Start huddle in random
+                                  - [Button] Search in channel
+                                      - Messages
+                                      - Add canvas
+                                      - Files
+                                  - Canvas
+                                  - List
+                                  - Folder
+                                        random:
+                                          Monday, February 16th Press enter to select a date to jump to.:
+                                          Sarah Chen: Has anyone tried that new ramen place on 5th street? Heard it's amazing. 12:32 PM. 3 replies.:
+                                                - [Button] Sarah Chen
+                                                - [Link] Feb 16th at 12:32:10 PM
+                                                  - 12:32 PM
+                                                - Has anyone tried that new ramen place on 5th street? Heard it's amazing.
+                                                - [Button] 3 replies
+                                                  - Last reply 2 days ago
+                                                  - View thread
+                                          Marcus Webb: Yeah the tonkotsu is incredible, went there last Friday. 12:45 PM.:
+                                                - [Button] Marcus Webb
+                                                - [Link] Feb 16th at 12:45:22 PM
+                                                  - 12:45 PM
+                                                - Yeah the tonkotsu is incredible, went there last Friday
+                                          Priya Patel: Happy Monday everyone! Anyone watching the new season of White Lotus? No spoilers please. 1:03 PM. 1 reaction.:
+                                                - [Button] Priya Patel
+                                                - [Link] Feb 16th at 1:03:44 PM
+                                                  - 1:03 PM
+                                                - Happy Monday everyone! Anyone watching the new season of White Lotus? No spoilers please
+                                                Reactions:
+                                                    - 4
+                                                  - [Button] Add reaction…
+                                          Tuesday, February 17th Press enter to select a date to jump to.:
+                                          Marcus Webb: Lol just saw someone bring their dog to the office and it immediately knocked over a monitor. 10:15 AM. 2 reactions.:
+                                                - [Button] Marcus Webb
+                                                - [Link] Feb 17th at 10:15:33 AM
+                                                  - 10:15 AM
+                                                - Lol just saw someone bring their dog to the office and it immediately knocked over a monitor
+                                                Reactions:
+                                                    - 6
+                                                    - 2
+                                                  - [Button] Add reaction…
+                                          Sarah Chen: The coffee machine on the 3rd floor is broken again, heads up. 2:20 PM.:
+                                                - [Button] Sarah Chen
+                                                - [Link] Feb 17th at 2:20:18 PM
+                                                  - 2:20 PM
+                                                - The coffee machine on the 3rd floor is broken again, heads up
+                                                  Message actions:
+                                                    - [Button] Add reaction…
+                                                    - [Button] Reply in thread
+                                                    - [Button] Forward message…
+                                    composer:
+                                              - [Button] Emoji
+                                              - [Button] Mention someone
+                                              - [Button] Record video clip
+                                              - [Button] Record audio clip
+                                              - [Button] Run shortcut
+                                            - [Button] Send now
